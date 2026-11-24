@@ -1,0 +1,13 @@
+import { JSDOM } from 'jsdom';
+
+// Extrai o campo linkReal de um card HTML
+// cardHtml: string (HTML do card)
+export function extractLinkReal(cardHtml) {
+  const dom = new JSDOM(cardHtml);
+  const doc = dom.window.document;
+  const a = doc.querySelector('a.wpgb-card-layer-link[href*="/imovel/"], a[href*="/imovel/"]');
+  if (!a) return '';
+  const href = a.getAttribute('href') || '';
+  if (href.startsWith('http')) return href;
+  return `https://megacasaimoveis.com.br${href.startsWith('/') ? '' : '/'}${href}`;
+}

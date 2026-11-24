@@ -1,0 +1,3936 @@
+﻿<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scheduler JF Raspagens</title>
+  <link rel="icon" type="image/png" href="raspagem.png" />
+  <style>
+    :root {
+      --bg: #141414;
+      --panel: #1e1e1e;
+      --panel-2: #252525;
+      --text: #e7e7e7;
+      --muted: #a4a4a4;
+      --accent: #66c3ff;
+      --ok: #4dd07d;
+      --warn: #ffca55;
+      --err: #ff6b6b;
+      --border: #343434;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: radial-gradient(circle at 10% 10%, #1d1d1d, var(--bg));
+      color: var(--text);
+      font-family: Consolas, "Courier New", monospace;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tab-bar {
+      flex: 0 0 auto;
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px 0;
+      box-sizing: border-box;
+    }
+
+    .tab-btn {
+      background: #232323;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      padding: 9px 16px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: var(--panel);
+      color: var(--accent);
+    }
+
+    .tab-panel {
+      display: none;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .tab-panel.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .acoes-page {
+      height: 100%;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 12px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .acoes-page .sub {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .acoes-page .card {
+      overflow: visible;
+      min-height: auto;
+      flex: 0 0 auto;
+    }
+
+    .json-page {
+      height: 100%;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    .sub-tab-bar {
+      flex: 0 0 auto;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 10px 12px 0;
+      box-sizing: border-box;
+    }
+
+    .subtab-btn {
+      background: #232323;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      padding: 7px 12px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .subtab-btn.active {
+      background: var(--panel);
+      color: var(--accent);
+    }
+
+    .subtab-content {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 12px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .subtab-panel {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .subtab-panel.active {
+      display: flex;
+    }
+
+    .subtab-panel .card {
+      overflow: visible;
+      min-height: auto;
+      flex: 0 0 auto;
+    }
+
+    .count-badge {
+      display: inline-flex;
+      align-items: center;
+      background: var(--accent);
+      color: #10262f;
+      border-radius: 999px;
+      padding: 2px 9px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: 6px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 12px;
+      height: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+
+    .card {
+      background: linear-gradient(180deg, #222, var(--panel));
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .card .head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      background: #1b1b1b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.2px;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .controls .body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+      height: calc(100% - 44px);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .row label {
+      color: var(--muted);
+      font-size: 12px;
+      min-width: 130px;
+    }
+
+    input[type="time"] {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 12px;
+      width: 120px;
+    }
+
+    .btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      background: #2f2f2f;
+      color: var(--text);
+      border: 1px solid #474747;
+      border-radius: 7px;
+      padding: 8px 10px;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: 0.18s;
+    }
+
+    button:hover { background: #3a3a3a; }
+    button.primary { border-color: #2d7ca8; background: #1f3644; }
+    button.primary:hover { background: #27485c; }
+    button.warn { border-color: #8f6a16; background: #47381f; }
+    button.warn:hover { background: #5b4928; }
+
+    button.secondary { border-color: #4f4f4f; background: #2b2b2b; }
+    button.secondary:hover { background: #383838; }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .status {
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .status strong { color: var(--text); }
+
+    .firestore-progress { display: none; margin-top: 10px; }
+    .firestore-progress.visible { display: block; }
+    .firestore-progress-track { height: 8px; overflow: hidden; background: #121212; border: 1px solid var(--border); border-radius: 4px; }
+    .firestore-progress-bar { height: 100%; width: 0; background: var(--accent); transition: width 0.25s ease; }
+    .firestore-progress-label { margin-top: 5px; color: var(--muted); font-size: 12px; }
+    @keyframes preco-json-progress { from { transform: translateX(-120%); } to { transform: translateX(320%); } }
+    #precoJsonBatchProgressBar { width: 30%; animation: preco-json-progress 1.2s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) { #precoJsonBatchProgressBar { animation-duration: 3s; } }
+
+    .select-input {
+      appearance: none;
+      -webkit-appearance: none;
+      background: var(--panel-2) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237fb5d6' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>") no-repeat right 10px center;
+      background-size: 12px;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 30px 8px 10px;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: 0.18s;
+      min-width: 160px;
+    }
+
+    .select-input:hover { border-color: #2d7ca8; }
+    .select-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(45, 124, 168, 0.35); }
+
+    .projects-wrap {
+      flex: 1;
+      min-height: 120px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: auto;
+      background: #171717;
+    }
+
+    .project-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 9px;
+      border-bottom: 1px solid #262626;
+      font-size: 12px;
+    }
+
+    .project-item:last-child { border-bottom: none; }
+
+    .project-item input { accent-color: #64c2ff; }
+
+    .project-error {
+      color: #ff6b6b;
+      font-weight: bold;
+    }
+
+    .terminal {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .terminal .body {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      height: calc(100% - 44px);
+    }
+
+    .legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+      background: #1a1a1a;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .legend span { display: inline-flex; gap: 4px; align-items: center; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .dot.info { background: var(--accent); }
+    .dot.success { background: var(--ok); }
+    .dot.warn { background: var(--warn); }
+    .dot.error { background: var(--err); }
+
+    #output {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      white-space: pre-wrap;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: #89e58f;
+      background: #0f0f0f;
+    }
+
+    .log-line { margin-bottom: 3px; }
+    .log-line.info { color: #79c9ff; }
+    .log-line.success { color: #86ee92; }
+    .log-line.warn { color: #ffd06e; }
+    .log-line.error { color: #ff8f8f; }
+    .log-line.stdout { color: #9be99f; }
+    .log-line.stderr { color: #ffb2b2; }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 9999;
+    }
+
+    .overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(1220px, 100%);
+      max-height: 90vh;
+      background: #171717;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .modal-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      background: #1d1d1d;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .modal-title {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .modal-body {
+      padding: 12px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-filters {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: #1b1b1b;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .modal-filters .fgroup {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .modal-filters .fgroup label {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .modal-filters input,
+    .modal-filters select {
+      width: 100%;
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 12px;
+      box-sizing: border-box;
+    }
+
+    .issue-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #1a1a1a;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .issue-card.resolved {
+      border-color: #2f7a4a;
+      background: #18251d;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #3f8f5b;
+      background: #21432c;
+      color: #b9f2c9;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      width: fit-content;
+    }
+
+    .issue-meta {
+      font-size: 12px;
+      color: #d3d3d3;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .issue-meta a {
+      color: #8ad0ff;
+      word-break: break-all;
+      text-decoration: none;
+    }
+
+    .issue-meta a:hover {
+      text-decoration: underline;
+    }
+
+    .issue-fix {
+      border-left: 1px dashed #3a3a3a;
+      padding-left: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .issue-fix-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .issue-fix input,
+    .issue-fix select {
+      width: 100%;
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 12px;
+      box-sizing: border-box;
+    }
+
+    .issue-empty {
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .dup-suggestion {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #1a1a1a;
+      padding: 10px;
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dup-suggestion-info {
+      flex: 0 0 220px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .dup-members {
+      flex: 1 1 auto;
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 8px;
+      padding-bottom: 2px;
+    }
+
+    .dup-member {
+      flex: 0 0 190px;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      background: #161616;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 11px;
+      color: #d3d3d3;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .dup-member:hover { border-color: var(--accent); }
+
+    .dup-member.selecionado {
+      border-color: var(--ok);
+      box-shadow: 0 0 0 2px rgba(77, 208, 125, 0.35);
+      background: #17251c;
+    }
+
+    .dup-member img {
+      width: 100%;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    .dup-member strong { color: var(--accent); }
+
+    .dup-suggestion-actions {
+      flex: 0 0 140px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .linkfoto-alerts {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .linkfoto-alert {
+      border: 1px solid #b87316;
+      border-left: 4px solid #f0a62e;
+      border-radius: 6px;
+      background: #30240f;
+      padding: 9px 10px;
+      color: #ffe2a8;
+      font-size: 12px;
+    }
+
+    .filters-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .filters-table th,
+    .filters-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .filters-table th {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .filters-table input {
+      width: 100%;
+      min-width: 180px;
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 12px;
+      box-sizing: border-box;
+    }
+
+    .filter-section-title {
+      color: var(--warn);
+      font-size: 13px;
+      font-weight: 700;
+      margin: 16px 0 8px;
+    }
+
+    .filter-section-title:first-child {
+      margin-top: 0;
+    }
+
+    .firestore-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .firestore-summary-section { min-width: 0; }
+    .firestore-summary-section.wide { grid-column: 1 / -1; }
+    .firestore-summary-section h3 { color: var(--accent); font-size: 13px; margin: 0 0 8px; }
+    .firestore-summary-list { max-height: 270px; overflow: auto; }
+    .firestore-summary tr.invalid td { background: #3a241f; color: #ffb6a9; }
+    .firestore-summary tr.variacao-positiva td { background: #1f3a22; color: #9be38a; }
+    .firestore-summary tr.variacao-negativa td { background: #3a241f; color: #ffb6a9; }
+    .firestore-summary tr.summary-bairro-invalid { cursor: pointer; }
+    .firestore-summary tr.summary-bairro-invalid:hover td { background: #513128; }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; grid-template-rows: 430px 1fr; }
+      .issue-card { grid-template-columns: 1fr; }
+      .issue-fix { border-left: none; border-top: 1px dashed #3a3a3a; padding-left: 0; padding-top: 10px; }
+      .modal-filters { grid-template-columns: 1fr; }
+      .firestore-summary { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+      .firestore-summary-section.wide { grid-column: auto; }
+    }
+
+    @media (max-width: 600px) {
+      .firestore-summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="tab-bar">
+    <button id="tabBtnRaspagem" class="tab-btn active" data-tab="raspagem">Raspagem</button>
+    <button id="tabBtnJson" class="tab-btn" data-tab="json">Json</button>
+    <button id="tabBtnFirestore" class="tab-btn" data-tab="firestore">Firestore</button>
+    <button id="tabBtnTypesense" class="tab-btn" data-tab="typesense">Typesense</button>
+    <button id="tabBtnFiltros" class="tab-btn" data-tab="filtros">Filtros</button>
+    <button id="tabBtnDuplicados" class="tab-btn" data-tab="duplicados">Duplicados</button>
+  </div>
+
+  <div id="tabRaspagem" class="tab-panel active">
+  <div class="layout">
+    <section class="card controls">
+      <div class="head">
+        <div class="title">Configuração da Rotina</div>
+      </div>
+      <div class="body">
+        <div class="row">
+          <label for="hourInput">Horário diário</label>
+          <input id="hourInput" type="time" step="60" />
+          <button id="btnNoSchedule" type="button">Sem agendamento</button>
+        </div>
+        <p>Deixe o horário vazio e salve para desativar o automático. Executar agora continua disponível; uma rodada em andamento não será interrompida.</p>
+
+        <div class="btns">
+          <button id="btnSelectAll">Marcar todos</button>
+          <button id="btnUnselectAll">Desmarcar todos</button>
+          <button id="btnSave" class="primary">Salvar agendamento</button>
+          <button id="btnRun" class="primary">Executar agora</button>
+          <button id="btnStop" class="warn">Parar execução</button>
+          <button id="btnClearLog">Limpar log</button>
+        </div>
+
+        <div id="statusBox" class="status">Carregando configuração...</div>
+
+        <div class="projects-wrap" id="projectsList"></div>
+      </div>
+    </section>
+
+    <section class="card terminal">
+      <div class="head">
+        <div class="title">Terminal de Execução (sequencial alfabético)</div>
+      </div>
+      <div class="body">
+        <div class="legend">
+          <span><i class="dot info"></i>Info</span>
+          <span><i class="dot success"></i>Sucesso</span>
+          <span><i class="dot warn"></i>Aviso</span>
+          <span><i class="dot error"></i>Erro</span>
+        </div>
+        <div id="output"></div>
+      </div>
+    </section>
+  </div>
+  </div>
+
+  <div id="tabJson" class="tab-panel">
+    <div class="json-page">
+      <div class="sub-tab-bar">
+        <button class="subtab-btn active" data-subtab="cidades">Cidades</button>
+        <button class="subtab-btn" data-subtab="bairros">Bairros</button>
+        <button class="subtab-btn" data-subtab="titulo">Título</button>
+        <button class="subtab-btn" data-subtab="localizacao">Localização</button>
+        <button class="subtab-btn" data-subtab="tipoImovel">Tipo Imóvel</button>
+        <button class="subtab-btn" data-subtab="preco">Preço</button>
+        <button class="subtab-btn" data-subtab="linkFoto">linkFoto</button>
+        <button class="subtab-btn" data-subtab="linkReal">linkReal</button>
+        <button class="subtab-btn" data-subtab="resumo">Resumo</button>
+      </div>
+      <div class="subtab-content">
+        <div id="subtabCidades" class="subtab-panel active">
+          <section class="card">
+            <div class="head">
+              <div>
+                <div class="title">Checkar Cidade (dados brutos dos crawlers - JSON) <span id="cityJsonCountBadge" class="count-badge"></span></div>
+              </div>
+            </div>
+            <div class="body">
+              <div class="btns" style="grid-template-columns: 1fr;">
+                <button id="btnCheckCityJson" class="primary">Checkar cidades no JSON</button>
+              </div>
+              <div id="cityJsonSummary" class="sub">Clique no botão para checar registros sem slug, com nome vazio ou em maiúsculas.</div>
+              <div id="cityJsonIssues"></div>
+            </div>
+          </section>
+        </div>
+
+        <div id="subtabBairros" class="subtab-panel">
+          <section class="card">
+            <div class="head">
+              <div>
+                <div class="title">Checkar Bairro (dados brutos dos crawlers - JSON) <span id="bairroJsonCountBadge" class="count-badge"></span></div>
+              </div>
+            </div>
+            <div class="body">
+              <div class="btns" style="grid-template-columns: 1fr;">
+                <button id="btnCheckBairroJson" class="primary">Checkar bairros no JSON</button>
+              </div>
+              <div id="bairroJsonSummary" class="sub">Clique no botão para checar registros com bairro vazio ou em maiúsculas.</div>
+              <div id="bairroJsonIssues"></div>
+            </div>
+          </section>
+        </div>
+
+        <div id="subtabTitulo" class="subtab-panel">
+          <section class="card">
+            <div class="head"><div class="title">Checkar Título (dados brutos dos crawlers - JSON) <span id="tituloJsonCountBadge" class="count-badge"></span></div></div>
+            <div class="body">
+              <div class="btns" style="grid-template-columns: 1fr;">
+                <button id="btnCheckTituloJson" class="primary">Checkar títulos no JSON</button>
+              </div>
+              <div id="tituloJsonSummary" class="sub">Clique no botão para checar títulos vazios.</div>
+              <div id="tituloJsonIssues"></div>
+            </div>
+          </section>
+        </div>
+
+        <div id="subtabLocalizacao" class="subtab-panel">
+          <section class="card">
+            <div class="head"><div class="title">Checkar Localização (dados brutos dos crawlers - JSON) <span id="localizacaoJsonCountBadge" class="count-badge"></span></div></div>
+            <div class="body">
+              <div class="btns" style="grid-template-columns: 1fr;">
+                <button id="btnCheckLocalizacaoJson" class="primary">Checkar localizações no JSON</button>
+              </div>
+              <div id="localizacaoJsonSummary" class="sub">Clique no botão para checar localizações vazias.</div>
+              <div id="localizacaoJsonIssues"></div>
+            </div>
+          </section>
+        </div>
+
+        <div id="subtabTipoImovel" class="subtab-panel">
+          <section class="card">
+            <div class="head"><div class="title">Checkar Tipo Imóvel (dados brutos dos crawlers - JSON) <span id="tipoImovelJsonCountBadge" class="count-badge"></span></div></div>
+            <div class="body">
+              <div class="btns" style="grid-template-columns: 1fr;">
+                <button id="btnCheckTipoImovelJson" class="primary">Checkar tipos de imóvel no JSON</button>
+              </div>
+              <div id="tipoImovelJsonSummary" class="sub">Clique no botão para checar tipos de imóvel vazios.</div>
+              <div id="tipoImovelJsonIssues"></div>
+            </div>
+          </section>
+        </div>
+
+        <div id="subtabPreco" class="subtab-panel">
+          <section class="card">
+            <div class="head"><div class="title">Checkar Preço (dados brutos dos crawlers - JSON) <span id="precoJsonCountBadge" class="count-badge"></span></div></div>
+            <div class="body">
+              <div class="btns" style="grid-template-columns: 1fr;">
+                <button id="btnCheckPrecoJson" class="primary">Checkar preços no JSON</button>
+                <button id="btnConfirmAllPrecoJson" class="primary" hidden>Confirmar todos os preços</button>
+              </div>
+              <div id="precoJsonSummary" class="sub">Clique no botão para checar preços iguais a zero ou acima de R$ 10 milhões.</div>
+              <div id="precoJsonBatchProgress" class="firestore-progress" aria-live="polite">
+                <div class="firestore-progress-track"><div id="precoJsonBatchProgressBar" class="firestore-progress-bar"></div></div>
+                <div id="precoJsonBatchProgressLabel" class="firestore-progress-label"></div>
+              </div>
+              <div id="precoJsonIssues"></div>
+            </div>
+          </section>
+        </div>
+
+        <div id="subtabLinkFoto" class="subtab-panel">
+          <section class="card">
+            <div class="head"><div class="title">Checkar linkFoto (dados brutos dos crawlers - JSON) <span id="linkFotoJsonCountBadge" class="count-badge"></span></div></div>
+            <div class="body">
+              <div class="btns" style="grid-template-columns: repeat(2, 1fr);">
+                <button id="btnCheckLinkFotoJson" class="primary">Checkar linkFoto no JSON</button>
+                <button id="btnConfirmAllLinkFotoJson">Confirmar todos sem foto</button>
+              </div>
+              <div id="linkFotoJsonSummary" class="sub">Clique no botão para checar registros com linkFoto vazio.</div>
+              <div id="linkFotoJsonIssues"></div>
+            </div>
+          </section>
+        </div>
+
+        <div id="subtabLinkReal" class="subtab-panel">
+          <section class="card">
+            <div class="head"><div class="title">Checkar linkReal (dados brutos dos crawlers - JSON) <span id="linkRealJsonCountBadge" class="count-badge"></span></div></div>
+            <div class="body">
+              <div class="btns" style="grid-template-columns: 1fr;">
+                <button id="btnCheckLinkRealJson" class="primary">Checkar linkReal no JSON</button>
+              </div>
+              <div id="linkRealJsonSummary" class="sub">Clique no botão para checar registros com linkReal vazio.</div>
+              <div id="linkRealJsonIssues"></div>
+            </div>
+          </section>
+        </div>
+        <div id="subtabResumo" class="subtab-panel">
+          <section class="card">
+            <div class="head"><div class="title">Resumo dos JSONs dos crawlers</div></div>
+            <div class="body">
+              <div class="btns" style="grid-template-columns: repeat(2, 1fr);">
+                <button id="btnJsonSummary" class="primary">Atualizar resumo dos JSONs</button>
+              </div>
+              <div id="jsonSummary" class="sub">Clique em atualizar para carregar os dados dos JSONs.</div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tabFirestore" class="tab-panel">
+    <div class="acoes-page">
+      <section class="card">
+        <div class="head">
+          <div class="title">Ações no Firestore</div>
+        </div>
+        <div class="body">
+          <div class="btns">
+            <button id="btnFirestoreSummary" class="primary">Atualizar JSON e resumo em cache</button>
+            <button id="btnFirestoreCounts" class="primary">Consultar contagens no Firestore</button>
+            <button id="btnFirestoreDetails" class="warn">Consultar detalhamento remoto (consome cota)</button>
+            <button id="btnPublishJson" class="warn">Transmitir JSONs para o Firestore</button>
+          </div>
+          <div class="sub">Abrir o painel e atualizar o cache não consulta o Firestore. Contagens e detalhamento remoto exigem ação explícita e são reutilizados por pelo menos 15 minutos. Correções de JSON e filtros permanecem locais.</div>
+          <div id="firestoreProgress" class="firestore-progress" aria-live="polite">
+            <div class="firestore-progress-track"><div id="firestoreProgressBar" class="firestore-progress-bar"></div></div>
+            <div id="firestoreProgressLabel" class="firestore-progress-label"></div>
+          </div>
+          <div id="firestoreTransferSummary" class="firestore-summary"></div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="head"><div class="title">Resumo dos imóveis publicados</div></div>
+        <div class="body">
+          <div id="firestoreSummary" class="sub">Atualize o resumo para ler o último snapshot local. Sem snapshot, consulte o detalhamento remoto somente se aceitar o consumo de leituras.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="tabTypesense" class="tab-panel">
+    <div class="acoes-page">
+      <section class="card">
+        <div class="head">
+          <div class="title">Typesense</div>
+        </div>
+        <div class="body">
+          <div class="row">
+            <label for="typesenseSource">Origem dos dados</label>
+            <select id="typesenseSource" class="select-input">
+              <option value="current" selected>Firestore – dados atuais (padrão)</option>
+              <option value="backup">Firestore – último backup</option>
+              <option value="json">JSON local direto (sem passar pelo Firestore)</option>
+            </select>
+          </div>
+          <div id="typesenseSourceInfo" class="sub">Carregando data dos dados de origem...</div>
+          <fieldset id="typesenseProjectsControls" hidden>
+            <legend>Projetos JSON para atualizar no Typesense</legend>
+            <div class="sub">Somente os marcados serão sincronizados. Os desmarcados serão preservados no Typesense. Nos marcados, anúncios ausentes do JSON serão removidos.</div>
+            <div class="btns">
+              <button type="button" id="typesenseSelectAll">Marcar todos</button>
+              <button type="button" id="typesenseSelectNone">Desmarcar todos</button>
+            </div>
+            <div id="typesenseProjects" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;max-height:260px;overflow:auto"></div>
+            <div id="typesenseProjectsCount" class="sub" aria-live="polite"></div>
+          </fieldset>
+          <div class="btns">
+            <button id="btnTypesenseSummary" class="primary">Atualizar resumo do Typesense</button>
+            <button id="btnTypesense" class="warn">Transmitir para o Typesense</button>
+          </div>
+          <div id="typesenseProgress" class="firestore-progress" aria-live="polite">
+            <div class="firestore-progress-track"><div id="typesenseProgressBar" class="firestore-progress-bar"></div></div>
+            <div id="typesenseProgressLabel" class="firestore-progress-label"></div>
+          </div>
+          <div id="typesenseTransferSummary" class="firestore-summary"></div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="head"><div class="title">Comparativo: base a enviar × Typesense atual</div></div>
+        <div class="body">
+          <div id="typesenseSummary" class="sub">Clique em atualizar para carregar os dados do Typesense.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="tabFiltros" class="tab-panel">
+    <div class="json-page">
+      <div class="sub-tab-bar">
+        <button class="filter-subtab-btn subtab-btn active" data-filter-subtab="cidade">Cidade</button>
+        <button class="filter-subtab-btn subtab-btn" data-filter-subtab="bairro">Bairro</button>
+        <button class="filter-subtab-btn subtab-btn" data-filter-subtab="tipo">Tipo</button>
+      </div>
+      <div class="subtab-content">
+        <div id="filterSubtabCidade" class="subtab-panel active">
+          <section class="card">
+            <div class="head"><div class="title">Cidades <span id="filterCitiesCount" class="count-badge"></span></div></div>
+            <div class="body">
+              <div id="filterCitiesSummary" class="sub">Carregando cidades...</div>
+              <div id="filterCitiesList"></div>
+            </div>
+          </section>
+        </div>
+        <div id="filterSubtabBairro" class="subtab-panel">
+          <section class="card">
+            <div class="head"><div class="title">Bairros principais <span id="filterBairrosCount" class="count-badge"></span></div></div>
+            <div class="body">
+              <div id="filterBairrosSummary" class="sub">Carregando bairros...</div>
+              <div id="filterBairrosList"></div>
+            </div>
+          </section>
+        </div>
+        <div id="filterSubtabTipo" class="subtab-panel">
+          <section class="card">
+            <div class="head"><div class="title">Tipos de imóvel <span id="filterTiposCount" class="count-badge"></span></div></div>
+            <div class="body">
+              <div id="filterTiposSummary" class="sub">Carregando tipos...</div>
+              <div id="filterTiposList"></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tabDuplicados" class="tab-panel">
+    <div class="json-page">
+      <div class="sub-tab-bar">
+        <button class="dup-subtab-btn subtab-btn active" data-dup-subtab="sugestoes">Sugestões</button>
+        <button class="dup-subtab-btn subtab-btn" data-dup-subtab="manual">Vincular manualmente</button>
+        <button class="dup-subtab-btn subtab-btn" data-dup-subtab="grupos">Grupos confirmados</button>
+      </div>
+      <div class="subtab-content">
+        <div id="dupSubtabSugestoes" class="subtab-panel active">
+          <section class="card">
+            <div class="head">
+              <div class="title">Sugestões automáticas de duplicidade <span id="dupSugestoesCountBadge" class="count-badge"></span></div>
+            </div>
+            <div class="body">
+              <div class="btns" style="grid-template-columns: 1fr;">
+                <button id="btnDupSugestoes" class="primary">Buscar sugestões</button>
+              </div>
+              <div id="dupSugestoesSummary" class="sub">Clique no botão para comparar cidade, bairro, localização, metragem, quartos e vagas entre projetos diferentes.</div>
+              <div id="dupSugestoesList"></div>
+            </div>
+          </section>
+        </div>
+        <div id="dupSubtabManual" class="subtab-panel">
+          <section class="card">
+            <div class="head"><div class="title">Vincular imóveis manualmente</div></div>
+            <div class="body">
+              <div class="row">
+                <label for="dupBuscaInput">Buscar imóvel (título, localização ou link)</label>
+                <input id="dupBuscaInput" placeholder="Digite ao menos 2 letras..." />
+              </div>
+              <div id="dupBuscaResultados"></div>
+              <div id="dupSelecionados" class="sub">Nenhum imóvel selecionado.</div>
+              <div class="btns" style="grid-template-columns: 1fr;">
+                <button id="btnDupVincularManual" class="primary">Vincular selecionados como duplicados</button>
+              </div>
+            </div>
+          </section>
+        </div>
+        <div id="dupSubtabGrupos" class="subtab-panel">
+          <section class="card">
+            <div class="head">
+              <div class="title">Grupos confirmados <span id="dupGruposCountBadge" class="count-badge"></span></div>
+            </div>
+            <div class="body">
+              <div class="btns" style="grid-template-columns: 1fr;">
+                <button id="btnDupGrupos" class="primary">Atualizar grupos confirmados</button>
+              </div>
+              <div id="dupGruposList" class="sub">Clique em atualizar para carregar os grupos já confirmados.</div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="cityResolveOverlay" class="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Correção manual de cidades sem slug">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Correção Manual de Cidades Sem Slug</div>
+          <div id="cityResolveSummary" style="color: var(--muted); margin-top: 3px;">Carregando pendências...</div>
+        </div>
+        <div class="modal-actions">
+          <button id="btnReloadCityIssues" class="secondary">Recarregar</button>
+          <button id="btnCloseCityResolve" class="warn">Fechar</button>
+        </div>
+      </div>
+      <div id="cityResolveBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="bairroSummaryOverlay" class="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Correção de bairros fora do padrão">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Correção de Bairros Fora do Padrão</div>
+          <div id="bairroSummaryOverlayText" style="color: var(--muted); margin-top: 3px;">Carregando registros...</div>
+        </div>
+        <div class="modal-actions"><button id="btnCloseBairroSummary" class="warn">Fechar</button></div>
+      </div>
+      <div id="bairroSummaryOverlayBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="confirmOverlay" class="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmOverlayTitle" style="width: min(520px, 100%);">
+      <div class="modal-head"><div id="confirmOverlayTitle" class="modal-title">Confirmar ação</div></div>
+      <div id="confirmOverlayText" class="modal-body" style="white-space: pre-line; padding: 14px 12px;"></div>
+      <div class="modal-head" style="justify-content: flex-end; border-top: 1px solid var(--border); border-bottom: 0;">
+        <button id="btnConfirmCancel">Cancelar</button>
+        <button id="btnConfirmOk" class="warn">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    const socket = io();
+
+    const tabButtons = document.querySelectorAll(".tab-bar > .tab-btn");
+    const tabPanels = {
+      raspagem: document.getElementById("tabRaspagem"),
+      json: document.getElementById("tabJson"),
+      firestore: document.getElementById("tabFirestore"),
+      typesense: document.getElementById("tabTypesense"),
+      filtros: document.getElementById("tabFiltros"),
+      duplicados: document.getElementById("tabDuplicados"),
+    };
+
+    function activateTab(tabName) {
+      tabButtons.forEach((btn) => btn.classList.toggle("active", btn.getAttribute("data-tab") === tabName));
+      Object.entries(tabPanels).forEach(([name, panel]) => panel.classList.toggle("active", name === tabName));
+    }
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener("click", () => activateTab(btn.getAttribute("data-tab")));
+    });
+
+    const subtabButtons = document.querySelectorAll(".subtab-btn");
+    const subtabPanels = {
+      cidades: document.getElementById("subtabCidades"),
+      bairros: document.getElementById("subtabBairros"),
+      titulo: document.getElementById("subtabTitulo"),
+      localizacao: document.getElementById("subtabLocalizacao"),
+      tipoImovel: document.getElementById("subtabTipoImovel"),
+      preco: document.getElementById("subtabPreco"),
+      linkFoto: document.getElementById("subtabLinkFoto"),
+      linkReal: document.getElementById("subtabLinkReal"),
+      resumo: document.getElementById("subtabResumo"),
+    };
+
+    function activateSubtab(subtabName) {
+      subtabButtons.forEach((btn) => btn.classList.toggle("active", btn.getAttribute("data-subtab") === subtabName));
+      Object.entries(subtabPanels).forEach(([name, panel]) => panel.classList.toggle("active", name === subtabName));
+    }
+
+    subtabButtons.forEach((btn) => {
+      btn.addEventListener("click", () => activateSubtab(btn.getAttribute("data-subtab")));
+    });
+
+    const hourInput = document.getElementById("hourInput");
+    const btnNoSchedule = document.getElementById("btnNoSchedule");
+    const scheduleLabel = () => currentConfig.hour
+      ? `${currentConfig.hour} (America/Sao_Paulo)`
+      : "Desativado — somente execução manual";
+    const projectsList = document.getElementById("projectsList");
+    const output = document.getElementById("output");
+    const statusBox = document.getElementById("statusBox");
+
+    const btnSelectAll = document.getElementById("btnSelectAll");
+    const btnUnselectAll = document.getElementById("btnUnselectAll");
+    const btnSave = document.getElementById("btnSave");
+    const btnRun = document.getElementById("btnRun");
+    const btnPublishJson = document.getElementById("btnPublishJson");
+    const btnFirestoreSummary = document.getElementById("btnFirestoreSummary");
+    const firestoreSummary = document.getElementById("firestoreSummary");
+    const firestoreTransferSummary = document.getElementById("firestoreTransferSummary");
+    const firestoreProgress = document.getElementById("firestoreProgress");
+    const firestoreProgressBar = document.getElementById("firestoreProgressBar");
+    const firestoreProgressLabel = document.getElementById("firestoreProgressLabel");
+    let firestorePublishOutputBuffer = "";
+
+    function setFirestoreProgress(current, total, collectionName, status) {
+      const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+      firestoreProgress.classList.add("visible");
+      firestoreProgressBar.style.width = `${percentage}%`;
+      firestoreProgressLabel.textContent = `${current}/${total} projetos: ${collectionName} ${status}.`;
+    }
+
+    function setFirestoreRecordProgress(current, total) {
+      const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+      firestoreProgress.classList.add("visible");
+      firestoreProgressBar.style.width = `${percentage}%`;
+      firestoreProgressLabel.textContent = `Salvando dados no Firestore: ${current.toLocaleString("pt-BR")}/${total.toLocaleString("pt-BR")} operações (${percentage}%).`;
+    }
+
+    function setFirestoreMessage(message, percentage = 0) {
+      firestoreProgress.classList.add("visible");
+      firestoreProgressBar.style.width = `${percentage}%`;
+      firestoreProgressLabel.textContent = message;
+    }
+
+    // Dialogos nativos (window.confirm) podem ser suprimidos no navegador integrado; usa um modal proprio.
+    const confirmOverlay = document.getElementById("confirmOverlay");
+    function confirmarNoPainel(message) {
+      document.getElementById("confirmOverlayText").textContent = message;
+      confirmOverlay.classList.add("open");
+      confirmOverlay.setAttribute("aria-hidden", "false");
+      const ok = document.getElementById("btnConfirmOk");
+      const cancel = document.getElementById("btnConfirmCancel");
+      ok.focus();
+      return new Promise((resolve) => {
+        const finish = (value) => {
+          confirmOverlay.classList.remove("open");
+          confirmOverlay.setAttribute("aria-hidden", "true");
+          ok.removeEventListener("click", onOk);
+          cancel.removeEventListener("click", onCancel);
+          confirmOverlay.removeEventListener("click", onBackdrop);
+          document.removeEventListener("keydown", onKey);
+          resolve(value);
+        };
+        const onOk = () => finish(true);
+        const onCancel = () => finish(false);
+        const onBackdrop = (event) => { if (event.target === confirmOverlay) finish(false); };
+        const onKey = (event) => { if (event.key === "Escape") finish(false); };
+        ok.addEventListener("click", onOk);
+        cancel.addEventListener("click", onCancel);
+        confirmOverlay.addEventListener("click", onBackdrop);
+        document.addEventListener("keydown", onKey);
+      });
+    }
+    const btnJsonSummary = document.getElementById("btnJsonSummary");
+    const jsonSummary = document.getElementById("jsonSummary");
+    const btnTypesense = document.getElementById("btnTypesense");
+    const typesenseSource = document.getElementById("typesenseSource");
+    const typesenseSourceInfo = document.getElementById("typesenseSourceInfo");
+    const btnTypesenseSummary = document.getElementById("btnTypesenseSummary");
+    const typesenseTransferSummary = document.getElementById("typesenseTransferSummary");
+    const typesenseSummary = document.getElementById("typesenseSummary");
+
+    function formatarDataHoraIso(iso) {
+      if (!iso) return "sem data registrada";
+      const data = new Date(iso);
+      if (Number.isNaN(data.getTime())) return "sem data registrada";
+      return data.toLocaleString("pt-BR");
+    }
+
+    let typesenseSourceData = null;
+    const typesenseProjectsControls = document.getElementById("typesenseProjectsControls");
+    const typesenseProjectsList = document.getElementById("typesenseProjects");
+    const typesenseProjectsKey = "typesense-json-selected-projects";
+    let typesenseProjectsLoaded = false;
+    function getTypesenseSelectedProjects() {
+      return [...typesenseProjectsList.querySelectorAll("input:checked")].map(input => input.value);
+    }
+    function updateTypesenseProjectSelection() {
+      const selected = getTypesenseSelectedProjects();
+      try { localStorage.setItem(typesenseProjectsKey, JSON.stringify(selected)); }
+      catch (error) { appendLog(`[TYPESENSE] Não foi possível salvar a seleção neste navegador: ${error.message}`, "error"); }
+      document.getElementById("typesenseProjectsCount").textContent = `${selected.length} de ${typesenseSourceData?.json.projects?.length || 0} projetos selecionados.`;
+      typesenseSummary.textContent = "Seleção alterada. Atualize o resumo antes de enviar.";
+      typesenseTransferSummary.innerHTML = "";
+    }
+    function renderTypesenseProjects() {
+      const projects = typesenseSourceData?.json.projects || [];
+      let saved = null;
+      try {
+        const raw = localStorage.getItem(typesenseProjectsKey);
+        if (raw !== null) {
+          saved = JSON.parse(raw);
+          if (!Array.isArray(saved)) throw new Error("Seleção salva inválida.");
+        }
+      } catch (error) {
+        appendLog(`[TYPESENSE] Não foi possível recuperar a seleção: ${error.message}`, "error");
+      }
+      const selected = new Set(saved === null ? projects : saved);
+      typesenseProjectsList.innerHTML = projects.map(name => `<label><input type="checkbox" value="${escapeHtml(name)}"${selected.has(name) ? " checked" : ""}> ${escapeHtml(name)}</label>`).join("");
+      typesenseProjectsLoaded = true;
+      document.getElementById("typesenseProjectsCount").textContent = `${getTypesenseSelectedProjects().length} de ${projects.length} projetos selecionados.`;
+    }
+    typesenseProjectsList.addEventListener("change", updateTypesenseProjectSelection);
+    for (const [id, checked] of [["typesenseSelectAll", true], ["typesenseSelectNone", false]]) {
+      document.getElementById(id).addEventListener("click", () => {
+        typesenseProjectsList.querySelectorAll("input").forEach(input => { input.checked = checked; });
+        updateTypesenseProjectSelection();
+      });
+    }
+
+    function renderTypesenseSourceInfo() {
+      typesenseProjectsControls.hidden = typesenseSource.value !== "json";
+      const data = typesenseSourceData;
+      if (!data) return;
+      const jsonInfo = `<strong>JSON local:</strong> ${data.json.total.toLocaleString("pt-BR")} imóvel(is), atualizado em ${formatarDataHoraIso(data.json.ultimaAtualizacao)}`;
+      if (typesenseSource.value === "json") {
+        typesenseSourceInfo.innerHTML = `${jsonInfo} &nbsp;·&nbsp; Envio direto: o Firestore não é consultado.`;
+        return;
+      }
+      const firestoreInfo = data.firestoreError
+        ? `<span style="color:#b45309"><strong>Firestore:</strong> indisponível (${escapeHtml(data.firestoreError)}) Use a origem "JSON local direto".</span>`
+        : `<strong>Firestore atual:</strong> ${data.current.total.toLocaleString("pt-BR")} imóvel(is), atualizado em ${formatarDataHoraIso(data.current.ultimaAtualizacao)}` +
+          ` &nbsp;·&nbsp; <strong>Último backup:</strong> ${data.backup.total.toLocaleString("pt-BR")} imóvel(is), atualizado em ${formatarDataHoraIso(data.backup.ultimaAtualizacao)}`;
+      typesenseSourceInfo.innerHTML = `${jsonInfo} &nbsp;·&nbsp; ${firestoreInfo}${data.snapshotAt ? ` &nbsp;·&nbsp; Contagens em cache de ${escapeHtml(formatarDataHoraIso(data.snapshotAt))}; não é consulta ao vivo.` : ""}`;
+    }
+
+    async function loadTypesenseSourceInfo() {
+      typesenseSourceInfo.textContent = "Carregando data dos dados de origem...";
+      try {
+        const res = await fetch("/api/typesense-source-info");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao obter data dos dados de origem.");
+        typesenseSourceData = data;
+        renderTypesenseProjects();
+        renderTypesenseSourceInfo();
+      } catch (err) {
+        typesenseSourceInfo.textContent = err.message;
+      }
+    }
+
+    loadTypesenseSourceInfo();
+    typesenseSource.addEventListener("change", renderTypesenseSourceInfo);
+    document.getElementById("tabBtnTypesense")?.addEventListener("click", loadTypesenseSourceInfo);
+    const typesenseProgress = document.getElementById("typesenseProgress");
+    const typesenseProgressBar = document.getElementById("typesenseProgressBar");
+    const typesenseProgressLabel = document.getElementById("typesenseProgressLabel");
+    let typesenseOutputBuffer = "";
+
+    function setTypesenseProgress(current, total, label) {
+      const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+      typesenseProgress.classList.add("visible");
+      typesenseProgressBar.style.width = `${percentage}%`;
+      typesenseProgressLabel.textContent = label || `${current.toLocaleString("pt-BR")}/${total.toLocaleString("pt-BR")}`;
+    }
+    const btnCheckCitySlug = document.getElementById("btnCheckCitySlug");
+    const btnResolveCitySlug = document.getElementById("btnResolveCitySlug");
+    const btnCheckBairroSlug = document.getElementById("btnCheckBairroSlug");
+    const btnResolveBairroSlug = document.getElementById("btnResolveBairroSlug");
+    const btnStop = document.getElementById("btnStop");
+    const btnClearLog = document.getElementById("btnClearLog");
+
+    const cityResolveOverlay = document.getElementById("cityResolveOverlay");
+    const cityResolveSummary = document.getElementById("cityResolveSummary");
+    const cityResolveBody = document.getElementById("cityResolveBody");
+    const btnReloadCityIssues = document.getElementById("btnReloadCityIssues");
+    const btnCloseCityResolve = document.getElementById("btnCloseCityResolve");
+
+    let projects = [];
+    let projectErrors = {};
+    let currentConfig = { hour: "21:00", selectedScripts: [] };
+    let cityOptions = [];
+    let allCityIssues = [];
+    let openCityPageAfterCheck = false;
+    let openBairroPageAfterCheck = false;
+
+    function appendLog(text, css = "info") {
+      const line = document.createElement("div");
+      line.className = `log-line ${css}`;
+      line.textContent = text;
+      output.appendChild(line);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function setStatus(stateText) {
+      statusBox.innerHTML = stateText;
+    }
+
+    function setRunningUiState(isRunning) {
+      btnRun.disabled = isRunning;
+      if (btnCheckCitySlug) btnCheckCitySlug.disabled = isRunning;
+      if (btnResolveCitySlug) btnResolveCitySlug.disabled = isRunning;
+      if (btnCheckBairroSlug) btnCheckBairroSlug.disabled = isRunning;
+      if (btnResolveBairroSlug) btnResolveBairroSlug.disabled = isRunning;
+      btnSave.disabled = isRunning;
+      btnSelectAll.disabled = isRunning;
+      btnUnselectAll.disabled = isRunning;
+      btnStop.disabled = !isRunning;
+    }
+
+    function negociacaoArquivo(file) {
+      return /Locacao\.json$/i.test(String(file || "")) ? "Aluguel" : "Venda";
+    }
+
+    function escapeHtml(text) {
+      return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function openCityResolveOverlay() {
+      cityResolveOverlay.classList.add("open");
+      cityResolveOverlay.setAttribute("aria-hidden", "false");
+    }
+
+    function closeCityResolveOverlay() {
+      cityResolveOverlay.classList.remove("open");
+      cityResolveOverlay.setAttribute("aria-hidden", "true");
+    }
+
+    function getCityOptionsMarkup() {
+      return cityOptions
+        .map((opt) => `<option value="${escapeHtml(opt.slug)}">${escapeHtml(opt.nome)} (${escapeHtml(opt.slug)})</option>`)
+        .join("");
+    }
+
+    function isJuizDeForaValue(value) {
+      const normalized = String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+
+      return normalized === "juiz-de-fora" || normalized === "juiz-de-fora-mg" || normalized === "juiz de fora";
+    }
+
+    function getUniqueIssueValues(issues, key) {
+      const set = new Set();
+      for (const issue of issues) {
+        const val = String(issue[key] || "").trim();
+        set.add(val || "(vazio)");
+      }
+      return Array.from(set).sort((a, b) => {
+        if (key === "cidadeAtual") {
+          const aPriority = isJuizDeForaValue(a) ? 0 : 1;
+          const bPriority = isJuizDeForaValue(b) ? 0 : 1;
+          if (aPriority !== bPriority) return aPriority - bPriority;
+        }
+        return a.localeCompare(b, "pt-BR");
+      });
+    }
+
+    function buildFilterOptionsHtml(values, emptyLabel) {
+      return values
+        .map((val) => {
+          const display = val === "(vazio)" ? emptyLabel : val;
+          return `<option value="${escapeHtml(val)}">${escapeHtml(display)}</option>`;
+        })
+        .join("");
+    }
+
+    function applyCityIssueFilters() {
+      const fImob = document.getElementById("filterIssueImob");
+      const fCidade = document.getElementById("filterIssueCidade");
+      const fBusca = document.getElementById("filterIssueBusca");
+
+      if (!fImob || !fCidade || !fBusca) {
+        renderIssueCards(allCityIssues);
+        return;
+      }
+
+      const selectedImob = String(fImob.value || "");
+      const selectedCidade = String(fCidade.value || "");
+      const q = String(fBusca.value || "").trim().toLowerCase();
+
+      const filtered = allCityIssues.filter((issue) => {
+        const imobValue = String(issue.imobiliariaId || "").trim() || "(vazio)";
+        const cidadeValue = String(issue.cidadeAtual || "").trim() || "(vazio)";
+
+        if (selectedImob && imobValue !== selectedImob) return false;
+        if (selectedCidade && cidadeValue !== selectedCidade) return false;
+
+        if (!q) return true;
+
+        const haystack = [
+          issue.docId,
+          issue.imobiliariaId,
+          issue.cidadeAtual,
+          issue.titulo,
+          issue.localizacao,
+          issue.linkReal,
+        ]
+          .map((x) => String(x || "").toLowerCase())
+          .join(" ");
+
+        return haystack.includes(q);
+      });
+
+      renderIssueCards(filtered);
+    }
+
+    async function resolveCityIssue(docId, mode, payload, cardEl) {
+      const btns = cardEl.querySelectorAll("button");
+      btns.forEach((btn) => btn.disabled = true);
+
+      try {
+        const res = await fetch(`/api/city-slug-issues/${encodeURIComponent(docId)}/resolve`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode, ...payload })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          appendLog(`[CIDADES] ${data.error || "Falha ao corrigir cidade."}`, "error");
+          btns.forEach((btn) => btn.disabled = false);
+          return false;
+        }
+
+        appendLog(`[CIDADES] Registro ${docId} corrigido para '${data.cidade}'.`, "success");
+        return true;
+      } catch (err) {
+        appendLog(`[CIDADES] Erro ao corrigir registro ${docId}: ${err.message}`, "error");
+        btns.forEach((btn) => btn.disabled = false);
+        return false;
+      }
+    }
+
+    function renderIssueCards(issues) {
+      const cardsWrap = document.getElementById("cityIssueCards");
+
+      cityResolveSummary.textContent = `Pendências exibidas: ${issues.length} de ${allCityIssues.length}`;
+
+      if (!cardsWrap) {
+        return;
+      }
+
+      if (!issues.length) {
+        cardsWrap.innerHTML = `<div class="issue-empty">Nenhuma pendência para os filtros atuais.</div>`;
+        return;
+      }
+
+      cardsWrap.innerHTML = issues.map((issue) => {
+        const safeDocId = escapeHtml(issue.docId);
+        const safeCidadeAtual = escapeHtml(issue.cidadeAtual || "(vazio)");
+        const safeTitulo = escapeHtml(issue.titulo || "(sem título)");
+        const safeImob = escapeHtml(issue.imobiliariaId || "(sem imobiliáriaId)");
+        const safeLocal = escapeHtml(issue.localizacao || "(sem localização)");
+        const safeLink = escapeHtml(issue.linkReal || "");
+
+        return `
+          <div class="issue-card" data-doc-id="${safeDocId}">
+            <div class="issue-meta">
+              <div><strong>Doc:</strong> ${safeDocId}</div>
+              <div><strong>Imobiliária:</strong> ${safeImob}</div>
+              <div><strong>Cidade atual:</strong> ${safeCidadeAtual}</div>
+              <div><strong>Título:</strong> ${safeTitulo}</div>
+              <div><strong>Localização:</strong> ${safeLocal}</div>
+              <div><strong>LinkReal:</strong> ${safeLink ? `<a href="${safeLink}" target="_blank" rel="noopener noreferrer">${safeLink}</a>` : "(sem link)"}</div>
+            </div>
+            <div class="issue-fix">
+              <div><strong>Opção 1: atribuir cidade já existente</strong></div>
+              <div class="issue-fix-row">
+                <select data-role="assignSlug">
+                  <option value="">Selecione uma cidade...</option>
+                  ${getCityOptionsMarkup()}
+                </select>
+                <button data-action="assign" class="primary">Aplicar</button>
+              </div>
+
+              <div><strong>Opção 2: criar nova cidade e aplicar</strong></div>
+              <div class="issue-fix-row">
+                <input data-role="newNome" placeholder="Nome da cidade (ex: Juiz de Fora MG)" />
+                <span></span>
+              </div>
+              <div class="issue-fix-row">
+                <input data-role="newSlug" placeholder="Slug (opcional, ex: juiz-de-fora-mg)" />
+                <button data-action="create" class="primary">Criar e aplicar</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      cardsWrap.querySelectorAll(".issue-card").forEach((card) => {
+        const docId = card.getAttribute("data-doc-id");
+        const assignBtn = card.querySelector("button[data-action='assign']");
+        const createBtn = card.querySelector("button[data-action='create']");
+
+        assignBtn.addEventListener("click", async () => {
+          const targetSlug = card.querySelector("select[data-role='assignSlug']").value;
+          if (!targetSlug) {
+            appendLog(`[CIDADES] Selecione uma cidade para o registro ${docId}.`, "warn");
+            return;
+          }
+          const ok = await resolveCityIssue(docId, "assign", { targetSlug }, card);
+          if (ok) {
+            allCityIssues = allCityIssues.filter((item) => item.docId !== docId);
+            applyCityIssueFilters();
+          }
+        });
+
+        createBtn.addEventListener("click", async () => {
+          const targetNome = card.querySelector("input[data-role='newNome']").value.trim();
+          const targetSlug = card.querySelector("input[data-role='newSlug']").value.trim();
+
+          if (!targetNome && !targetSlug) {
+            appendLog(`[CIDADES] Informe nome ou slug para criar a cidade no registro ${docId}.`, "warn");
+            return;
+          }
+
+          const ok = await resolveCityIssue(docId, "create", { targetNome, targetSlug }, card);
+          if (ok) {
+            allCityIssues = allCityIssues.filter((item) => item.docId !== docId);
+            applyCityIssueFilters();
+          }
+        });
+      });
+    }
+
+    function renderCityIssues(issues) {
+      allCityIssues = Array.isArray(issues) ? issues : [];
+
+      if (!allCityIssues.length) {
+        cityResolveBody.innerHTML = `<div class="issue-empty">Nenhuma pendência de cidade sem slug encontrada.</div>`;
+        cityResolveSummary.textContent = "Pendências: 0";
+        return;
+      }
+
+      const imobs = getUniqueIssueValues(allCityIssues, "imobiliariaId");
+      const cidades = getUniqueIssueValues(allCityIssues, "cidadeAtual");
+
+      cityResolveBody.innerHTML = `
+        <div class="modal-filters">
+          <div class="fgroup">
+            <label for="filterIssueImob">Imobiliária</label>
+            <select id="filterIssueImob">
+              <option value="">Todas</option>
+              ${buildFilterOptionsHtml(imobs, "(vazio)")}
+            </select>
+          </div>
+          <div class="fgroup">
+            <label for="filterIssueCidade">Cidade atual</label>
+            <select id="filterIssueCidade">
+              <option value="">Todas</option>
+              ${buildFilterOptionsHtml(cidades, "(vazio)")}
+            </select>
+          </div>
+          <div class="fgroup">
+            <label for="filterIssueBusca">Busca livre</label>
+            <input id="filterIssueBusca" placeholder="docId, título, link, localização..." />
+          </div>
+          <button id="btnClearIssueFilters" class="secondary">Limpar filtros</button>
+        </div>
+        <div id="cityIssueCards"></div>
+      `;
+
+      const fImob = document.getElementById("filterIssueImob");
+      const fCidade = document.getElementById("filterIssueCidade");
+      const fBusca = document.getElementById("filterIssueBusca");
+      const btnClear = document.getElementById("btnClearIssueFilters");
+
+      fImob.addEventListener("change", applyCityIssueFilters);
+      fCidade.addEventListener("change", applyCityIssueFilters);
+      fBusca.addEventListener("input", applyCityIssueFilters);
+      btnClear.addEventListener("click", () => {
+        fImob.value = "";
+        fCidade.value = "";
+        fBusca.value = "";
+        applyCityIssueFilters();
+      });
+
+      applyCityIssueFilters();
+    }
+
+    async function loadCityIssues() {
+      cityResolveSummary.textContent = "Carregando pendências...";
+      cityResolveBody.innerHTML = `<div class="issue-empty">Buscando registros para correção manual...</div>`;
+
+      try {
+        const res = await fetch("/api/city-slug-issues");
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          throw new Error(data.error || "Falha ao buscar pendências de cidade.");
+        }
+
+        cityOptions = Array.isArray(data.cityOptions) ? data.cityOptions : [];
+        renderCityIssues(Array.isArray(data.issues) ? data.issues : []);
+      } catch (err) {
+        cityResolveSummary.textContent = "Falha ao carregar pendências.";
+        cityResolveBody.innerHTML = `<div class="issue-empty">${escapeHtml(err.message)}</div>`;
+        appendLog(`[CIDADES] ${err.message}`, "error");
+      }
+    }
+
+    function renderProjects() {
+      projectsList.innerHTML = "";
+      const sortedProjects = projects.filter(p =>
+        !["niteroi", "niteroi:vendas:validar", "jeferson"].includes(p.name)
+      ).sort((a, b) =>
+        (a.colecao || a.name).localeCompare(b.colecao || b.name, "pt-BR", { sensitivity: "base", numeric: true })
+      );
+      for (const p of sortedProjects) {
+        const item = document.createElement("label");
+        item.className = "project-item";
+        item.dataset.project = p.name;
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = p.name;
+        cb.checked = currentConfig.selectedScripts.includes(p.name);
+
+        const txt = document.createElement("span");
+        txt.textContent = p.colecao || p.name;
+        const etapas = [p.venda && "vendas", p.aluguel && "aluguéis"].filter(Boolean);
+        if (etapas.length) txt.title = `Executa: ${etapas.join(" → ")}`;
+
+        item.appendChild(cb);
+        item.appendChild(txt);
+        const error = document.createElement("span");
+        error.className = "project-error";
+        error.setAttribute("role", "status");
+        item.appendChild(error);
+        projectsList.appendChild(item);
+      }
+      updateProjectErrors(projectErrors);
+    }
+
+    function updateProjectErrors(errors) {
+      projectErrors = errors || {};
+      for (const item of projectsList.querySelectorAll(".project-item")) {
+        const scripts = projectErrors[item.dataset.project] || [];
+        const badge = item.querySelector(".project-error");
+        badge.textContent = scripts.length ? "ERRO" : "";
+        badge.title = scripts.length ? `Falha na raspagem: ${scripts.join(", ")}` : "";
+      }
+    }
+
+    function getSelectedScripts() {
+      return Array.from(projectsList.querySelectorAll("input[type='checkbox']"))
+        .filter((cb) => cb.checked)
+        .map((cb) => cb.value);
+    }
+
+    async function loadData() {
+      const res = await fetch("/api/projects");
+      const data = await res.json();
+      projects = data.projects || [];
+      projectErrors = data.projectErrors || {};
+      currentConfig = data.config || { hour: "21:00", selectedScripts: [] };
+
+      hourInput.value = currentConfig.hour;
+      renderProjects();
+
+      setStatus(
+        `<strong>Agendamento:</strong> ${scheduleLabel()}<br>` +
+        `<strong>Projetos selecionados:</strong> ${currentConfig.selectedScripts.length}`
+      );
+    }
+
+    btnSelectAll.addEventListener("click", () => {
+      projectsList.querySelectorAll("input[type='checkbox']").forEach((cb) => cb.checked = true);
+    });
+
+    btnUnselectAll.addEventListener("click", () => {
+      projectsList.querySelectorAll("input[type='checkbox']").forEach((cb) => cb.checked = false);
+    });
+
+    btnClearLog.addEventListener("click", () => {
+      output.innerHTML = "";
+    });
+
+    btnNoSchedule.addEventListener("click", () => {
+      hourInput.value = "";
+      appendLog("[CONFIG] Horário removido. Clique em Salvar agendamento para confirmar.", "info");
+    });
+
+    btnSave.addEventListener("click", async () => {
+      const selectedScripts = getSelectedScripts();
+      const hour = hourInput.value;
+
+      const res = await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hour, selectedScripts })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        appendLog(`[CONFIG] ${data.error || "Falha ao salvar"}`, "error");
+        return;
+      }
+
+      currentConfig = data.config;
+      setStatus(
+        `<strong>Agendamento:</strong> ${scheduleLabel()}<br>` +
+        `<strong>Projetos selecionados:</strong> ${currentConfig.selectedScripts.length}`
+      );
+      appendLog(currentConfig.hour
+        ? `[CONFIG] Agendamento salvo para ${currentConfig.hour}.`
+        : "[CONFIG] Agendamento automático desativado. Execução manual disponível.", "success");
+    });
+
+    btnRun.addEventListener("click", async () => {
+      const selectedScripts = getSelectedScripts();
+      const res = await fetch("/api/run-now", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ selectedScripts })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        appendLog(`[RUN] Execução manual disparada com ${selectedScripts.length} projeto(s).`, "info");
+      } else {
+        appendLog(`[RUN] ${data.error || "Falha ao disparar execução manual."}`, "error");
+      }
+    });
+
+    btnPublishJson.addEventListener("click", async () => {
+      const selectedScripts = getSelectedScripts();
+      if (!selectedScripts.length) {
+        setFirestoreMessage("Selecione ao menos um projeto na lista para transmitir.");
+        appendLog("[FIRESTORE] Nenhum projeto selecionado.", "warn");
+        return;
+      }
+      if (!(await confirmarNoPainel(`Publicar os JSONs dos ${selectedScripts.length} projetos selecionados no Firestore?`))) {
+        setFirestoreMessage("Transmissão cancelada.");
+        return;
+      }
+
+      firestorePublishOutputBuffer = "";
+      setFirestoreProgress(0, selectedScripts.length, "Preparando", "para transmissão");
+      btnPublishJson.disabled = true;
+
+      try {
+        const res = await fetch("/api/publish-json", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ selectedScripts })
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok) {
+          setFirestoreMessage(`Transmissão iniciada para ${data.collectionNames.length} coleção(ões). Aguardando progresso...`);
+          appendLog(`[FIRESTORE] Publicação iniciada para ${data.collectionNames.length} coleção(ões).`, "info");
+        } else {
+          const motivo = res.status === 409 ? "Já existe uma raspagem ou transmissão em andamento; aguarde terminar ou use Parar." : (data.error || "Falha ao iniciar publicação.");
+          setFirestoreMessage(`Não foi possível iniciar: ${motivo}`);
+          appendLog(`[FIRESTORE] ${motivo}`, "error");
+        }
+      } catch (error) {
+        setFirestoreMessage(`Não foi possível conectar ao servidor: ${error.message}`);
+        appendLog(`[FIRESTORE] Não foi possível conectar ao servidor: ${error.message}`, "error");
+      } finally {
+        btnPublishJson.disabled = false;
+      }
+    });
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(value);
+    }
+
+    function renderFirestoreList(title, items) {
+      const rows = items.map((item) => {
+        const isInvalidBairro = title === "Bairros" && item.foraDoPadrao;
+        return `<tr class="${item.foraDoPadrao ? "invalid" : ""}${isInvalidBairro ? " summary-bairro-invalid" : ""}" ${isInvalidBairro ? `data-bairro="${escapeHtml(item.value || "")}" tabindex="0" role="button"` : ""}><td>${escapeHtml(item.name)}</td><td>${formatNumber(item.count)}</td></tr>`;
+      }).join("");
+      return `<div class="firestore-summary-section"><h3>${title}</h3><div class="firestore-summary-list"><table class="filters-table"><thead><tr><th>Nome</th><th>Imóveis</th></tr></thead><tbody>${rows || "<tr><td colspan=\"2\">Sem dados</td></tr>"}</tbody></table></div></div>`;
+    }
+
+    function renderTypesenseComparacao(title, items, origemTitulo) {
+      const rows = items.map((item) => {
+        const diferente = item.origem !== item.typesense;
+        return `<tr${diferente ? ' class="invalid"' : ""}><td>${escapeHtml(item.name)}</td><td>${formatNumber(item.origem)}</td><td>${formatNumber(item.typesense)}</td></tr>`;
+      }).join("");
+      return `<div class="firestore-summary-section"><h3>${title}</h3><div class="firestore-summary-list"><table class="filters-table"><thead><tr><th>Nome</th><th>${escapeHtml(origemTitulo)}</th><th>Typesense atual</th></tr></thead><tbody>${rows || "<tr><td colspan=\"3\">Sem dados</td></tr>"}</tbody></table></div></div>`;
+    }
+
+    function renderFirestoreRanges(ranges) {
+      const labels = { preco: "Preço", dormitorioValor: "Dormitórios", banheiroValor: "Banheiros", areaValor: "Área", garagemValor: "Vagas" };
+      const rows = Object.entries(labels).map(([key, label]) => {
+        const range = ranges[key];
+        return `<tr><td>${label}</td><td>${range ? formatNumber(range.min) : "-"}</td><td>${range ? formatNumber(range.max) : "-"}</td><td>${range ? formatNumber(range.count) : 0}</td></tr>`;
+      }).join("");
+      return `<div class="firestore-summary-section wide"><h3>Faixas numéricas</h3><div class="firestore-summary-list"><table class="filters-table"><thead><tr><th>Campo</th><th>Mínimo</th><th>Máximo</th><th>Com valor</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    }
+
+    function formatTransferDate(value) {
+      if (!value) return "Sem movimentação";
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString("pt-BR");
+    }
+
+    function formatPercent(value) {
+      const sinal = value > 0 ? "+" : "";
+      return `${sinal}${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value)}%`;
+    }
+
+    function renderVariacaoProjetos(variacaoProjetos, limiar, anteriorEm) {
+      const destaques = (variacaoProjetos || []).filter((item) => item.destaque);
+      const rows = (variacaoProjetos || [])
+        .map((item) => {
+          const classe = item.destaque ? (item.percentual > 0 ? "variacao-positiva" : "variacao-negativa") : "";
+          return `<tr class="${classe}"><td>${escapeHtml(item.collectionName)}</td><td>${formatNumber(item.anterior)}</td><td>${formatNumber(item.atual)}</td><td>${item.diferenca > 0 ? "+" : ""}${formatNumber(item.diferenca)}</td><td>${formatPercent(item.percentual)}</td></tr>`;
+        })
+        .join("");
+      return `<div class="firestore-summary-section wide">
+        <h3>Variação de imóveis raspados por projeto (vs. última consulta em ${escapeHtml(formatTransferDate(anteriorEm))})</h3>
+        <div class="sub">Projetos com variação acima de ${limiar}% (positiva ou negativa) aparecem destacados: <strong>${destaques.length}</strong> de ${(variacaoProjetos || []).length}.</div>
+        <div class="firestore-summary-list"><table class="filters-table"><thead><tr><th>Projeto</th><th>Anterior</th><th>Atual</th><th>Diferença</th><th>Variação</th></tr></thead><tbody>${rows || "<tr><td colspan=\"5\">Sem dados</td></tr>"}</tbody></table></div>
+      </div>`;
+    }
+
+    async function loadFirestoreTransferSummary() {
+      firestoreTransferSummary.innerHTML = `<div class="sub">Carregando resumo da transmissão...</div>`;
+      const res = await fetch("/api/firestore-transfer-summary");
+      const data = await res.json().catch(() => ({}));
+      if (!data.json) throw new Error(data.error || "Falha ao carregar resumo da transmissão.");
+      const columns = [["Dados do JSON atual", data.json], ["Firestore atual", data.firestore?.current], ["Backup existente", data.firestore?.backup]];
+      firestoreTransferSummary.innerHTML = columns.map(([title, summary]) => summary
+        ? `<div class="firestore-summary-section"><h3>${title}</h3><div class="sub">${summary.projects != null ? `Arquivos de projeto: <strong>${formatNumber(summary.projects)}</strong><br>` : ""}Registros ${summary.excluidos == null ? "publicados" : "ativos"}: <strong>${formatNumber(summary.records)}</strong><br>${summary.excluidos != null ? `Registros excluídos: <strong>${formatNumber(summary.excluidos)}</strong><br>` : ""}Vendas: <strong>${formatNumber(summary.porTipo.venda.records)}</strong><br>Aluguéis: <strong>${formatNumber(summary.porTipo.aluguel.records)}</strong><br>Movimentação: <strong>${escapeHtml(formatTransferDate(summary.movedAt))}</strong></div></div>`
+        : `<div class="firestore-summary-section"><h3>${title}</h3><div class="sub">Indisponível: ${escapeHtml(data.error || data.firestoreError || "Falha ao consultar o Firestore.")}</div></div>`).join("");
+      if (!res.ok) throw new Error(data.error || "Falha ao carregar resumo da transmissão.");
+      if (!data.firestore) return;
+      firestoreTransferSummary.innerHTML += `<div class="firestore-summary-section wide sub">Contagens remotas em cache, consultadas em ${escapeHtml(formatTransferDate(data.snapshotAt))}. Não são uma consulta ao vivo.</div>`;
+      const rows = [["Vendas", "venda"], ["Aluguéis", "aluguel"]].map(([label, tipo]) => {
+        const local = data.json.porTipo[tipo].records;
+        const atual = data.firestore.current.porTipo[tipo].records;
+        const backup = data.firestore.backup.porTipo[tipo].records;
+        return `<tr><td>${label}</td><td>${formatNumber(local)}</td><td>${formatNumber(atual)}</td><td>${formatNumber(local - atual)}</td><td>${formatNumber(backup)}</td></tr>`;
+      }).join("");
+      firestoreTransferSummary.innerHTML += `<div class="firestore-summary-section wide"><h3>Comparação de quantidades — Juiz de Fora e Niterói</h3><div class="sub">Todos os JSONs locais de vendas e aluguéis, inclusive projetos ainda não transmitidos. Diferença = JSON ativo − Firestore atual; não representa comparação campo a campo.</div><table class="filters-table"><thead><tr><th>Tipo</th><th>JSON ativo</th><th>Firestore atual</th><th>Diferença</th><th>Backup</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+
+    async function loadFirestorePanel() {
+      firestoreSummary.textContent = "Carregando resumo do Firestore...";
+      try {
+        await loadFirestoreTransferSummary();
+        const res = await fetch("/api/firestore-summary");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao carregar resumo do Firestore.");
+        firestoreSummary.innerHTML = `<div class="sub">Snapshot local consultado em ${escapeHtml(formatTransferDate(data.snapshotAt))} — não é consulta ao vivo.<br>Total de imóveis publicados nesse snapshot: <strong>${formatNumber(data.total)}</strong></div><div class="firestore-summary">${renderFirestoreList("Imobiliárias", data.imobiliarias)}${renderFirestoreList("Tipos", data.tipos)}${renderFirestoreList("Cidades", data.cidades)}${renderFirestoreList("Bairros", data.bairros)}${renderFirestoreRanges(data.ranges)}</div>`;
+      } catch (err) {
+        firestoreSummary.textContent = err.message;
+      }
+    }
+    btnFirestoreSummary.addEventListener("click", loadFirestorePanel);
+    document.getElementById("tabBtnFirestore")?.addEventListener("click", loadFirestorePanel);
+    for (const [id, endpoint, full] of [
+      ["btnFirestoreCounts", "/api/firestore-transfer-summary/refresh", false],
+      ["btnFirestoreDetails", "/api/firestore-summary/refresh", true],
+    ]) {
+      document.getElementById(id).addEventListener("click", async event => {
+        if (full && !await confirmarNoPainel("Esta consulta lê todos os imóveis publicados no Firestore, uma leitura por documento. Uma base acima de 50 mil documentos pode esgotar a franquia gratuita diária em uma única consulta. Deseja continuar?")) return;
+        const button = event.currentTarget;
+        button.disabled = true;
+        try {
+          const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ confirmarLeituraCompleta: full }) });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Falha na consulta explicita do Firestore.");
+          await loadFirestorePanel();
+          await loadTypesenseSourceInfo();
+        } catch (error) {
+          firestoreSummary.textContent = error.message;
+          appendLog(`[FIRESTORE] ${error.message}`, "error");
+        } finally { button.disabled = false; }
+      });
+    }
+
+    btnTypesenseSummary.addEventListener("click", async () => {
+      typesenseTransferSummary.innerHTML = `<div class="sub">Carregando resumo do Typesense...</div>`;
+      typesenseSummary.textContent = "Carregando resumo do Typesense...";
+      try {
+        const origemJson = typesenseSource.value === "json";
+        const selectedProjects = origemJson ? getTypesenseSelectedProjects() : null;
+        if (origemJson && (!typesenseProjectsLoaded || !selectedProjects.length)) throw new Error("Selecione pelo menos um projeto JSON.");
+        const res = await fetch(`/api/typesense-summary${origemJson ? `?source=json&projects=${encodeURIComponent(JSON.stringify(selectedProjects))}` : ""}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao carregar resumo do Typesense.");
+        const columns = [[data.origem === "json" ? "Dados JSON local (projetos marcados)" : "Dados Firestore atual", data.firestore], ["Dados Typesense atual (base completa)", data.typesense]];
+        typesenseTransferSummary.innerHTML = columns.map(([title, summary]) => `<div class="firestore-summary-section"><h3>${title}</h3><div class="sub">Imóveis: <strong>${formatNumber(summary?.total || 0)}</strong><br>Tipos: <strong>${formatNumber(summary?.tipos || 0)}</strong><br>Cidades: <strong>${formatNumber(summary?.cidades || 0)}</strong><br>Bairros: <strong>${formatNumber(summary?.bairros || 0)}</strong></div></div>`).join("");
+        const resumo = data.resumo || { cidades: [], bairros: [], tipos: [] };
+        const comparacao = data.comparacao || { cidades: [], bairros: [], tipos: [] };
+        const origemTitulo = data.origem === "json" ? "Base atual (JSON)" : "Firestore atual";
+        typesenseSummary.innerHTML = `<div class="sub">${data.snapshotAt ? `Origem Firestore em cache de ${escapeHtml(formatTransferDate(data.snapshotAt))}.<br>` : ""}Total para enviar (${escapeHtml(origemTitulo)}): <strong>${formatNumber(data.firestore?.total || 0)}</strong> · Total no Typesense: <strong>${formatNumber(resumo.total || 0)}</strong></div><div class="firestore-summary">${renderTypesenseComparacao("Cidades", comparacao.cidades || [], origemTitulo)}${renderTypesenseComparacao("Bairros", comparacao.bairros || [], origemTitulo)}${renderTypesenseComparacao("Tipos", comparacao.tipos || [], origemTitulo)}</div>`;
+      } catch (err) {
+        typesenseTransferSummary.innerHTML = "";
+        typesenseSummary.textContent = err.message;
+      }
+    });
+
+    btnJsonSummary.addEventListener("click", async () => {
+      jsonSummary.textContent = "Carregando resumo dos JSONs...";
+      const res = await fetch("/api/json-summary");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        jsonSummary.textContent = data.error || "Falha ao carregar resumo dos JSONs.";
+        return;
+      }
+      const invalidos = [data.tipos, data.cidades, data.bairros].flat().filter((item) => item.foraDoPadrao).reduce((total, item) => total + item.count, 0);
+      jsonSummary.innerHTML = `<div class="sub">Total de imóveis nos JSONs: <strong>${formatNumber(data.total)}</strong>. Fora do padrão: <strong>${formatNumber(invalidos)}</strong>.</div><div class="firestore-summary">${renderVariacaoProjetos(data.variacaoProjetos, data.variacaoLimiar, data.variacaoAnteriorEm)}${renderFirestoreList("Imobiliárias", data.imobiliarias)}${renderFirestoreList("Tipos", data.tipos)}${renderFirestoreList("Cidades", data.cidades)}${renderFirestoreList("Bairros", data.bairros)}${renderFirestoreRanges(data.ranges)}</div>`;
+      jsonSummary.querySelectorAll(".summary-bairro-invalid").forEach((row) => {
+        const open = () => openBairroSummaryOverlay(row.dataset.bairro);
+        row.addEventListener("click", open);
+        row.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            open();
+          }
+        });
+      });
+    });
+
+    const bairroSummaryOverlay = document.getElementById("bairroSummaryOverlay");
+    const bairroSummaryOverlayText = document.getElementById("bairroSummaryOverlayText");
+    const bairroSummaryOverlayBody = document.getElementById("bairroSummaryOverlayBody");
+    const btnCloseBairroSummary = document.getElementById("btnCloseBairroSummary");
+
+    function closeBairroSummaryOverlay() {
+      bairroSummaryOverlay.classList.remove("open");
+      bairroSummaryOverlay.setAttribute("aria-hidden", "true");
+    }
+
+    async function openBairroSummaryOverlay(bairro) {
+      if (!bairro) return;
+      bairroSummaryOverlay.classList.add("open");
+      bairroSummaryOverlay.setAttribute("aria-hidden", "false");
+      bairroSummaryOverlayText.textContent = `Carregando registros de ${bairro}...`;
+      bairroSummaryOverlayBody.innerHTML = `<div class="issue-empty">Buscando registros...</div>`;
+
+      try {
+        const res = await fetch(`/api/json-summary/bairro-records?bairro=${encodeURIComponent(bairro)}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao carregar registros de bairro.");
+
+        const issues = Array.isArray(data.issues) ? data.issues : [];
+        const bairroOptions = data.bairroOptions && typeof data.bairroOptions === "object" ? data.bairroOptions : {};
+        const cityOptions = Array.isArray(data.cityOptions) ? data.cityOptions : [];
+        bairroSummaryOverlayText.textContent = `${issues.length} registro(s) com bairro "${bairro}".`;
+
+        if (!issues.length) {
+          bairroSummaryOverlayText.textContent = `O bairro "${bairro}" já não possui registros com esse valor.`;
+          bairroSummaryOverlayBody.innerHTML = `<div class="issue-empty">O resumo foi atualizado para remover esta linha.</div>`;
+          btnJsonSummary.click();
+          return;
+        }
+
+        const citiesWithIssues = [...new Set(issues.map((issue) => issue.cidade).filter(Boolean))];
+        const batchCityOptions = citiesWithIssues.map((cidade) => {
+          const city = cityOptions.find((option) => option.slug === cidade);
+          return `<option value="${escapeHtml(cidade)}">${escapeHtml(city?.nome || cidade)} (${escapeHtml(cidade)})</option>`;
+        }).join("");
+        bairroSummaryOverlayBody.innerHTML = `<div class="modal-filters">
+          <div class="fgroup"><label>Cidade a corrigir</label><select id="bairroSummaryBatchCity">${batchCityOptions}</select></div>
+          <div class="fgroup"><label>Bairro correto</label><select id="bairroSummaryBatchTarget"><option value="">Selecione o bairro correto...</option></select></div>
+          <button id="btnApplyBairroSummaryBatch" class="primary">Aplicar a todos nesta cidade</button>
+        </div>` + issues.map((issue, index) => {
+          const cityOptionsMarkup = cityOptions.map((city) => `<option value="${escapeHtml(city.slug)}" ${city.slug === issue.cidade ? "selected" : ""}>${escapeHtml(city.nome)} (${escapeHtml(city.slug)})</option>`).join("");
+          const assignOptionsMarkup = (bairroOptions[issue.cidade] || []).map((option) => `<option value="${escapeHtml(option.slug)}">${escapeHtml(option.nome)} (${escapeHtml(option.slug)})</option>`).join("");
+          const link = escapeHtml(issue.linkReal || "");
+          return `<div class="issue-card" data-key="${index}">
+            <div class="issue-meta">
+              <div><strong>Arquivo:</strong> ${escapeHtml(issue.file)}</div>
+              <div><strong>Negocia??o:</strong> ${negociacaoArquivo(issue.file)}</div>
+              <div><strong>Cidade:</strong> ${escapeHtml(issue.cidade || "(vazia)")}</div>
+              <div><strong>Bairro atual:</strong> ${escapeHtml(issue.bairro || "(vazio)")}</div>
+              <div><strong>Título:</strong> ${escapeHtml(issue.titulo || "(vazio)")}</div>
+              <div><strong>Link:</strong> ${link ? `<a href="${link}" target="_blank" rel="noopener noreferrer">Abrir anúncio</a>` : "(sem link)"}</div>
+            </div>
+            <div class="issue-fix">
+              <div class="issue-fix-row"><select data-role="cidade"><option value="">Selecione a cidade...</option>${cityOptionsMarkup}</select></div>
+              <div class="issue-fix-row"><select data-role="bairro"><option value="">Selecione o bairro correto...</option>${assignOptionsMarkup}</select><button data-action="assign" class="primary">Aplicar</button></div>
+              <div class="issue-fix-row"><input data-role="novoNome" placeholder="Novo bairro" /><button data-action="create" class="secondary">Criar e aplicar</button></div>
+            </div>
+          </div>`;
+        }).join("");
+
+        const batchCitySelect = document.getElementById("bairroSummaryBatchCity");
+        const batchTargetSelect = document.getElementById("bairroSummaryBatchTarget");
+        const renderBatchOptions = () => {
+          batchTargetSelect.innerHTML = `<option value="">Selecione o bairro correto...</option>${(bairroOptions[batchCitySelect.value] || []).map((option) => `<option value="${escapeHtml(option.slug)}">${escapeHtml(option.nome)} (${escapeHtml(option.slug)})</option>`).join("")}`;
+        };
+        renderBatchOptions();
+        batchCitySelect.addEventListener("change", renderBatchOptions);
+        document.getElementById("btnApplyBairroSummaryBatch").addEventListener("click", async () => {
+          const cidade = batchCitySelect.value.trim();
+          const targetSlug = batchTargetSelect.value.trim();
+          if (!cidade || !targetSlug) return appendLog("[BAIRROS-JSON] Selecione cidade e bairro correto para aplicar em lote.", "warn");
+          const count = issues.filter((issue) => issue.cidade === cidade).length;
+          if (!window.confirm(`Aplicar o bairro selecionado aos ${count} registro(s) de ${cidade}?`)) return;
+          const button = document.getElementById("btnApplyBairroSummaryBatch");
+          button.disabled = true;
+          try {
+            const res = await fetch("/api/json-summary/bairro-records/resolve-all", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ bairro, cidade, targetSlug }),
+            });
+            const result = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(result.error || "Falha ao aplicar correção em lote.");
+            appendLog(`[BAIRROS-JSON] ${result.updated} registro(s) corrigido(s) para ${result.targetSlug}.`, "success");
+            await openBairroSummaryOverlay(bairro);
+            btnJsonSummary.click();
+          } catch (err) {
+            appendLog(`[BAIRROS-JSON] ${err.message}`, "error");
+            button.disabled = false;
+          }
+        });
+
+        bairroSummaryOverlayBody.querySelectorAll(".issue-card").forEach((card) => {
+          const issue = issues[Number(card.dataset.key)];
+          const citySelect = card.querySelector("select[data-role='cidade']");
+          const bairroSelect = card.querySelector("select[data-role='bairro']");
+          const renderBairroOptions = () => {
+            bairroSelect.innerHTML = `<option value="">Selecione o bairro correto...</option>${(bairroOptions[citySelect.value] || []).map((option) => `<option value="${escapeHtml(option.slug)}">${escapeHtml(option.nome)} (${escapeHtml(option.slug)})</option>`).join("")}`;
+          };
+          citySelect.addEventListener("change", renderBairroOptions);
+          card.querySelector("button[data-action='assign']").addEventListener("click", async () => {
+            const targetCidade = citySelect.value.trim();
+            const targetSlug = bairroSelect.value.trim();
+            if (!targetCidade || !targetSlug) return appendLog("[BAIRROS-JSON] Selecione cidade e bairro corretos.", "warn");
+            await applyBairroSummaryCorrection(card, issue, "assign", { targetCidade, targetSlug });
+          });
+          card.querySelector("button[data-action='create']").addEventListener("click", async () => {
+            const targetCidade = citySelect.value.trim();
+            const targetNome = card.querySelector("input[data-role='novoNome']").value.trim();
+            if (!targetCidade || !targetNome) return appendLog("[BAIRROS-JSON] Informe cidade e nome do novo bairro.", "warn");
+            await applyBairroSummaryCorrection(card, issue, "create", { targetCidade, targetNome });
+          });
+        });
+      } catch (err) {
+        bairroSummaryOverlayText.textContent = "Falha ao carregar registros.";
+        bairroSummaryOverlayBody.innerHTML = `<div class="issue-empty">${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    async function applyBairroSummaryCorrection(card, issue, mode, payload) {
+      const buttons = card.querySelectorAll("button");
+      buttons.forEach((button) => { button.disabled = true; });
+      try {
+        const result = await resolveBairroJsonIssue(issue, mode, payload);
+        appendLog(`[BAIRROS-JSON] ${issue.file}: bairro corrigido para ${result.bairro}.`, "success");
+        card.remove();
+        btnJsonSummary.click();
+      } catch (err) {
+        appendLog(`[BAIRROS-JSON] ${err.message}`, "error");
+        buttons.forEach((button) => { button.disabled = false; });
+      }
+    }
+
+    btnCloseBairroSummary.addEventListener("click", closeBairroSummaryOverlay);
+    bairroSummaryOverlay.addEventListener("click", (event) => {
+      if (event.target === bairroSummaryOverlay) closeBairroSummaryOverlay();
+    });
+
+    btnTypesense.addEventListener("click", async () => {
+      const source = typesenseSource.value;
+      const selectedProjects = source === "json" ? getTypesenseSelectedProjects() : null;
+      if (source === "json" && (!typesenseProjectsLoaded || !selectedProjects.length)) {
+        setTypesenseProgress(0, 100, "Selecione pelo menos um projeto JSON antes de enviar.");
+        return;
+      }
+      const descricaoOrigem = { backup: "o último backup do Firestore", json: "os JSONs locais diretamente (sem passar pelo Firestore)" }[source] || "os dados atuais do Firestore";
+      if (!(await confirmarNoPainel(`Enviar ${descricaoOrigem} ao Typesense?${selectedProjects ? ` Serão sincronizados ${selectedProjects.length} projetos marcados, removendo seus anúncios ausentes do JSON. Os desmarcados serão preservados.` : ""}`))) return;
+      typesenseOutputBuffer = "";
+      setTypesenseProgress(0, 100, "Preparando transmissão para o Typesense...");
+      btnTypesense.disabled = true;
+      try {
+        const res = await fetch("/api/send-typesense", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ source, ...(selectedProjects ? { selectedProjects } : {}) }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Falha ao iniciar envio ao Typesense.");
+        if (!data.ok) throw new Error("Resposta inválida ao iniciar envio ao Typesense.");
+        typesenseProgressLabel.textContent = "Transmissão iniciada. Aguardando progresso do Typesense...";
+        appendLog(`[TYPESENSE] Envio ${{ backup: "do backup do Firestore", json: "direto dos JSONs locais" }[data.source] || "dos dados atuais do Firestore"} disparado com sucesso.`, "info");
+      } catch (err) {
+        setTypesenseProgress(0, 100, `Não foi possível iniciar a transmissão: ${err.message}`);
+        appendLog(`[TYPESENSE] ${err.message}`, "error");
+      } finally {
+        btnTypesense.disabled = false;
+      }
+    });
+
+    btnCheckCitySlug?.addEventListener("click", async () => {
+      const res = await fetch("/api/check-missing-city-slugs", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        openCityPageAfterCheck = true;
+        appendLog("[CIDADES] Checagem de cidades sem slug disparada com sucesso.", "info");
+      } else {
+        openCityPageAfterCheck = false;
+        appendLog(`[CIDADES] ${data.error || "Falha ao iniciar checagem de cidades sem slug."}`, "error");
+      }
+    });
+
+    btnResolveCitySlug?.addEventListener("click", async () => {
+      window.open("/cidade-pendencias.html", "_blank", "noopener,noreferrer");
+    });
+
+    btnCheckBairroSlug?.addEventListener("click", async () => {
+      const res = await fetch("/api/check-missing-bairro-slugs", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        openBairroPageAfterCheck = true;
+        appendLog("[BAIRROS] Checagem de bairros sem slug disparada com sucesso.", "info");
+      } else {
+        openBairroPageAfterCheck = false;
+        appendLog(`[BAIRROS] ${data.error || "Falha ao iniciar checagem de bairros sem slug."}`, "error");
+      }
+    });
+
+    btnResolveBairroSlug?.addEventListener("click", async () => {
+      window.open("/bairro-pendencias.html", "_blank", "noopener,noreferrer");
+    });
+
+    btnReloadCityIssues.addEventListener("click", async () => {
+      await loadCityIssues();
+    });
+
+    btnCloseCityResolve.addEventListener("click", () => {
+      closeCityResolveOverlay();
+    });
+
+    cityResolveOverlay.addEventListener("click", (ev) => {
+      if (ev.target === cityResolveOverlay) {
+        closeCityResolveOverlay();
+      }
+    });
+
+    btnStop.addEventListener("click", async () => {
+      const res = await fetch("/api/stop", { method: "POST" });
+      if (res.ok) appendLog("[STOP] Solicitação de parada enviada.", "warn");
+      else appendLog("[STOP] Falha ao enviar parada.", "error");
+    });
+
+    socket.on("scheduler:log", (msg) => {
+      appendLog(`[${msg.at}] ${msg.message}`, msg.type || "info");
+
+      if (/^Publicacao no Firestore iniciada/.test(msg.message)) {
+        firestoreProgress.classList.add("visible");
+        firestoreProgressBar.style.width = "0%";
+        firestoreProgressLabel.textContent = "Preparando transmissão...";
+      }
+
+      if (/^Publicacao no Firestore concluida\./.test(msg.message)) {
+        firestoreProgressBar.style.width = "100%";
+        firestoreProgressLabel.textContent = "Transmissão concluída.";
+        loadFirestoreTransferSummary().catch((error) => appendLog(`[FIRESTORE] ${error.message}`, "error"));
+        loadTypesenseSourceInfo();
+      }
+
+      if (/^Publicacao no Firestore falhou/.test(msg.message)) {
+        firestoreProgressLabel.textContent = `Transmissão interrompida: ${msg.message.replace(/^Publicacao no Firestore falhou:?\s*/, "") || "consulte o log."}`;
+      }
+
+      if (/^<<< \[typesense:sync(?::backup|:json)?\] OK/.test(msg.message)) {
+        typesenseProgressBar.style.width = "100%";
+        typesenseProgressLabel.textContent = "Transmissão concluída.";
+        btnTypesenseSummary.click();
+        loadTypesenseSourceInfo();
+      }
+
+      if (/^<<< \[typesense:sync(?::backup|:json)?\] (FALHOU|CANCELADO)/.test(msg.message)) {
+        typesenseProgressLabel.textContent = "Transmissão interrompida. Consulte o log.";
+      }
+
+      if (openCityPageAfterCheck && /<<< \[cidades:check-slug\] OK/.test(msg.message)) {
+        openCityPageAfterCheck = false;
+        window.open("/cidade-pendencias.html", "_blank", "noopener,noreferrer");
+      }
+
+      if (openCityPageAfterCheck && /<<< \[cidades:check-slug\] FALHOU/.test(msg.message)) {
+        openCityPageAfterCheck = false;
+      }
+
+      if (openBairroPageAfterCheck && /<<< \[bairros:check-slug\] OK/.test(msg.message)) {
+        openBairroPageAfterCheck = false;
+        window.open("/bairro-pendencias.html", "_blank", "noopener,noreferrer");
+      }
+
+      if (openBairroPageAfterCheck && /<<< \[bairros:check-slug\] FALHOU/.test(msg.message)) {
+        openBairroPageAfterCheck = false;
+      }
+    });
+
+    socket.on("scheduler:output", (data) => {
+      const prefix = data.stream === "stderr" ? "stderr" : "stdout";
+      appendLog(`[${data.project}] ${data.text}`.trimEnd(), prefix);
+      if (data.project !== "firestore") return;
+
+      firestoreProgress.classList.add("visible");
+      firestorePublishOutputBuffer = `${firestorePublishOutputBuffer}${data.text}`.slice(-1000);
+      const matches = [...firestorePublishOutputBuffer.matchAll(/FIRESTORE_PUBLISH_PROGRESS=(\d+)\/(\d+);([^;\r\n]+);([^\r\n]*)/g)];
+      const last = matches.at(-1);
+      if (last) setFirestoreProgress(Number(last[1]), Number(last[2]), last[3], last[4]);
+      const recordMatches = [...firestorePublishOutputBuffer.matchAll(/FIRESTORE_PUBLISH_RECORD_PROGRESS=(\d+)\/(\d+)/g)];
+      const lastRecord = recordMatches.at(-1);
+      if (lastRecord) setFirestoreRecordProgress(Number(lastRecord[1]), Number(lastRecord[2]));
+    });
+
+    socket.on("scheduler:output", (data) => {
+      if (!["typesense:sync", "typesense:sync:backup", "typesense:sync:json"].includes(data.project)) return;
+      typesenseOutputBuffer = `${typesenseOutputBuffer}${data.text}`.slice(-2000);
+      const loteMatches = [...typesenseOutputBuffer.matchAll(/\[PROGRESSO\] Importando lote (\d+)\/(\d+) \| documentos (\d+)\/(\d+) \(([\d.]+)%\)/g)];
+      const lastLote = loteMatches.at(-1);
+      if (lastLote) setTypesenseProgress(Number(lastLote[3]), Number(lastLote[4]), `Enviando ao Typesense: ${Number(lastLote[3]).toLocaleString("pt-BR")}/${Number(lastLote[4]).toLocaleString("pt-BR")} documentos (lote ${lastLote[1]}/${lastLote[2]}).`);
+    });
+
+    socket.on("scheduler:state", (state) => {
+      setRunningUiState(!!state.running);
+      updateProjectErrors(state.projectErrors);
+
+      if (state.running) {
+        const idx = state.currentIndex + 1;
+        const total = state.currentQueue.length;
+        setStatus(
+          `<strong>Status:</strong> Executando<br>` +
+          `<strong>Projeto atual:</strong> ${state.currentProject || "-"}<br>` +
+          `<strong>Progresso:</strong> ${idx}/${total}`
+        );
+      } else {
+        setStatus(
+          `<strong>Status:</strong> ${currentConfig.hour ? "Aguardando horário programado" : "Aguardando execução manual"}<br>` +
+          `<strong>Agendamento:</strong> ${scheduleLabel()}`
+        );
+      }
+    });
+
+    loadData().catch((err) => {
+      appendLog(`[INIT] Erro ao carregar dados: ${err.message}`, "error");
+    });
+
+    // ==========================================================
+    // Checkar Cidade (dados brutos dos crawlers - JSON)
+    // ==========================================================
+    const btnCheckCityJson = document.getElementById("btnCheckCityJson");
+    const cityJsonSummary = document.getElementById("cityJsonSummary");
+    const cityJsonIssuesEl = document.getElementById("cityJsonIssues");
+    const cityJsonCountBadge = document.getElementById("cityJsonCountBadge");
+
+    let cityJsonOptions = [];
+    let cityJsonIssues = [];
+
+    function getCityJsonOptionsMarkup() {
+      return cityJsonOptions
+        .map((opt) => `<option value="${escapeHtml(opt.slug)}">${escapeHtml(opt.nome)} (${escapeHtml(opt.slug)})</option>`)
+        .join("");
+    }
+
+    function motivoLabel(motivo) {
+      if (motivo === "vazio") return "Cidade vazia";
+      if (motivo === "maiusculo") return "Texto em maiúsculas";
+      return "Sem slug no catálogo";
+    }
+
+    function renderCityJsonIssues() {
+      const pendentes = cityJsonIssues.filter((issue) => !issue._resolved).length;
+      cityJsonSummary.textContent = `Registros com cidade pendente: ${pendentes} de ${cityJsonIssues.length}`;
+      cityJsonCountBadge.textContent = `${pendentes} pendente${pendentes === 1 ? "" : "s"}`;
+
+      if (!cityJsonIssues.length) {
+        cityJsonIssuesEl.innerHTML = `<div class="issue-empty">Nenhum registro pendente encontrado.</div>`;
+        return;
+      }
+
+      cityJsonIssuesEl.innerHTML = cityJsonIssues.map((issue, i) => {
+        const safeArquivo = escapeHtml(issue.file);
+        const safeCidade = escapeHtml(issue.cidade || "(vazio)");
+        const safeTitulo = escapeHtml(issue.titulo || "(sem título)");
+        const safeLink = escapeHtml(issue.linkReal || "");
+        const isResolved = !!issue._resolved;
+        const resolvedText = escapeHtml(issue._resolvedCidade || "");
+
+        return `
+          <div class="issue-card ${isResolved ? "resolved" : ""}" data-key="${i}">
+            <div class="issue-meta">
+              <div><strong>Arquivo:</strong> ${safeArquivo}</div>
+              <div><strong>Negocia??o:</strong> ${negociacaoArquivo(issue.file)}</div>
+              <div><strong>Motivo:</strong> ${motivoLabel(issue.motivo)}</div>
+              <div><strong>Cidade atual:</strong> ${safeCidade}</div>
+              ${isResolved ? `<div class="status-badge">Concluído: ${resolvedText || "cidade corrigida"}</div>` : ""}
+              <div><strong>Título:</strong> ${safeTitulo}</div>
+              <div><strong>LinkReal:</strong> ${safeLink ? `<a href="${safeLink}" target="_blank" rel="noopener noreferrer">${safeLink}</a>` : "(sem link)"}</div>
+            </div>
+            <div class="issue-fix">
+              <div><strong>Opção 1: atribuir cidade já existente</strong></div>
+              <div class="issue-fix-row">
+                <select data-role="assignSlug">
+                  <option value="">Selecione uma cidade...</option>
+                  ${getCityJsonOptionsMarkup()}
+                </select>
+                <button data-action="assign" class="primary" ${isResolved ? "disabled" : ""}>Aplicar</button>
+              </div>
+
+              <div><strong>Opção 2: criar nova cidade e aplicar</strong></div>
+              <div class="issue-fix-row">
+                <input data-role="newNome" placeholder="Nome da cidade (ex: Juiz de Fora MG)" />
+                <span></span>
+              </div>
+              <div class="issue-fix-row">
+                <input data-role="newSlug" placeholder="Slug (opcional, ex: juiz-de-fora-mg)" />
+                <button data-action="create" class="primary" ${isResolved ? "disabled" : ""}>Criar e aplicar</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      cityJsonIssuesEl.querySelectorAll(".issue-card").forEach((card) => {
+        const key = Number(card.getAttribute("data-key"));
+        const issue = cityJsonIssues[key];
+        const assignBtn = card.querySelector("button[data-action='assign']");
+        const createBtn = card.querySelector("button[data-action='create']");
+
+        if (assignBtn) {
+          assignBtn.addEventListener("click", async () => {
+            try {
+              const targetSlug = card.querySelector("select[data-role='assignSlug']").value.trim();
+              if (!targetSlug) {
+                appendLog("[CIDADES-JSON] Selecione uma cidade para atribuir.", "warn");
+                return;
+              }
+              const result = await resolveCityJsonIssue(issue, "assign", { targetSlug });
+              appendLog(`[CIDADES-JSON] ${issue.file}: cidade corrigida para ${result.cidade}.`, "success");
+              if (result.firestore) {
+                appendLog(`[CIDADES-JSON] Firestore: origem ${result.firestore.sourceUpdated || 0}, público ${result.firestore.publicUpdated || 0}.`, "success");
+              }
+              cityJsonIssues[key] = { ...issue, _resolved: true, _resolvedCidade: result.cidade };
+              renderCityJsonIssues();
+            } catch (err) {
+              appendLog(`[CIDADES-JSON] Erro: ${err.message}`, "error");
+            }
+          });
+        }
+
+        if (createBtn) {
+          createBtn.addEventListener("click", async () => {
+            try {
+              const targetNome = card.querySelector("input[data-role='newNome']").value.trim();
+              const targetSlug = card.querySelector("input[data-role='newSlug']").value.trim();
+              if (!targetNome && !targetSlug) {
+                appendLog("[CIDADES-JSON] Informe nome ou slug para criar a cidade.", "warn");
+                return;
+              }
+              const result = await resolveCityJsonIssue(issue, "create", { targetNome, targetSlug });
+              appendLog(`[CIDADES-JSON] ${issue.file}: nova cidade ${result.cidade} criada e aplicada.`, "success");
+              if (result.firestore) {
+                appendLog(`[CIDADES-JSON] Firestore: origem ${result.firestore.sourceUpdated || 0}, público ${result.firestore.publicUpdated || 0}.`, "success");
+              }
+              if (!cityJsonOptions.some((opt) => opt.slug === result.cidade)) {
+                cityJsonOptions.push({ slug: result.cidade, nome: result.nome });
+                cityJsonOptions.sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+              }
+              cityJsonIssues[key] = { ...issue, _resolved: true, _resolvedCidade: result.cidade };
+              renderCityJsonIssues();
+            } catch (err) {
+              appendLog(`[CIDADES-JSON] Erro: ${err.message}`, "error");
+            }
+          });
+        }
+      });
+    }
+
+    async function resolveCityJsonIssue(issue, mode, payload) {
+      const res = await fetch("/api/city-json-issues/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: issue.file, linkReal: issue.linkReal, mode, ...payload })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Falha ao corrigir cidade no JSON.");
+      }
+
+      return data;
+    }
+
+    btnCheckCityJson.addEventListener("click", async () => {
+      cityJsonSummary.textContent = "Checando cidades no JSON...";
+      cityJsonIssuesEl.innerHTML = `<div class="issue-empty">Buscando registros...</div>`;
+
+      try {
+        const res = await fetch("/api/city-json-issues");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || "Falha ao checar cidades no JSON.");
+        }
+
+        cityJsonOptions = Array.isArray(data.cityOptions) ? data.cityOptions : [];
+        cityJsonIssues = Array.isArray(data.issues) ? data.issues : [];
+        renderCityJsonIssues();
+        if (data.correctionsApplied > 0) {
+          appendLog(`[CIDADES-JSON] ${data.correctionsApplied} correção(ões) manual(is) reaplicada(s) aos JSONs antes da checagem.`, "success");
+        }
+        appendLog(`[CIDADES-JSON] Checagem concluída: ${data.total} pendência(s) encontrada(s).`, "info");
+      } catch (err) {
+        cityJsonSummary.textContent = "Falha ao checar cidades no JSON.";
+        cityJsonIssuesEl.innerHTML = `<div class="issue-empty">${escapeHtml(err.message)}</div>`;
+        appendLog(`[CIDADES-JSON] ${err.message}`, "error");
+      }
+    });
+
+    // ==========================================================
+    // Checkar Bairro (dados brutos dos crawlers - JSON)
+    // ==========================================================
+    const btnCheckBairroJson = document.getElementById("btnCheckBairroJson");
+    const bairroJsonSummary = document.getElementById("bairroJsonSummary");
+    const bairroJsonIssuesEl = document.getElementById("bairroJsonIssues");
+    const bairroJsonCountBadge = document.getElementById("bairroJsonCountBadge");
+
+    let bairroJsonOptions = {};
+    let bairroJsonCityOptions = [];
+    let bairroJsonIssues = [];
+    let bairroJsonTotal = 0;
+    let bairroJsonOffset = 0;
+    let bairroJsonHasMore = false;
+    let bairroJsonTotalByMotivo = {};
+
+    function getBairroJsonCityOptionsMarkup(cidade) {
+      return bairroJsonCityOptions
+        .map((opt) => `<option value="${escapeHtml(opt.slug)}" ${opt.slug === cidade ? "selected" : ""}>${escapeHtml(opt.nome)} (${escapeHtml(opt.slug)})</option>`)
+        .join("");
+    }
+
+    function getBairroJsonOptionsMarkup(cidade) {
+      const options = (bairroJsonOptions[cidade] || [])
+        .filter((opt) => String(opt?.principal || "sim").trim().toLowerCase() === "sim");
+      return options
+        .map((opt) => `<option value="${escapeHtml(opt.slug)}">${escapeHtml(opt.nome)} (${escapeHtml(opt.slug)})</option>`)
+        .join("");
+    }
+
+    function bairroMotivoLabel(motivo) {
+      if (motivo === "vazio") return "Bairro vazio";
+      if (motivo === "fora-do-catalogo") return "Fora do catálogo _jfBairros.json";
+      return "Texto em maiúsculas";
+    }
+
+    function renderBairroJsonIssues() {
+      const pendentes = bairroJsonIssues.filter((issue) => !issue._resolved).length;
+      const foraDoCatalogo = bairroJsonIssues.filter((issue) => !issue._resolved && issue.motivo === "fora-do-catalogo").length;
+      const totalPendentes = Object.values(bairroJsonTotalByMotivo).reduce((total, count) => total + Number(count || 0), 0);
+      const totalForaDoCatalogo = Number(bairroJsonTotalByMotivo["fora-do-catalogo"] || 0);
+      const totalExibido = bairroJsonTotal || totalPendentes;
+      bairroJsonSummary.textContent = `Registros com bairro pendente: ${totalPendentes || totalExibido} de ${totalExibido}. Fora do catálogo: ${totalForaDoCatalogo || foraDoCatalogo}.`;
+      bairroJsonCountBadge.textContent = `${totalPendentes || totalExibido} pendente${(totalPendentes || totalExibido) === 1 ? "" : "s"}`;
+
+      if (!bairroJsonIssues.length) {
+        bairroJsonIssuesEl.innerHTML = `<div class="issue-empty">Nenhum registro pendente encontrado.</div>`;
+        return;
+      }
+
+      bairroJsonIssuesEl.innerHTML = bairroJsonIssues.map((issue, i) => {
+        const safeArquivo = escapeHtml(issue.file);
+        const safeBairro = escapeHtml(issue.bairro || "(vazio)");
+        const safeCidade = escapeHtml(issue._resolvedCidade || issue.cidade || "(sem cidade)");
+        const safeTitulo = escapeHtml(issue.titulo || "(sem título)");
+        const safeLink = escapeHtml(issue.linkReal || "");
+        const isResolved = !!issue._resolved;
+        const resolvedText = issue._resolvedBairro
+          ? `${escapeHtml(issue._resolvedBairro)} (${escapeHtml(issue._resolvedCidade || issue.cidade || "")})`
+          : "";
+
+        return `
+          <div class="issue-card ${isResolved ? "resolved" : ""}" data-key="${i}">
+            <div class="issue-meta">
+              <div><strong>Arquivo:</strong> ${safeArquivo}</div>
+              <div><strong>Negocia??o:</strong> ${negociacaoArquivo(issue.file)}</div>
+              <div><strong>Motivo:</strong> ${bairroMotivoLabel(issue.motivo)}</div>
+              <div><strong>Cidade:</strong> ${safeCidade}</div>
+              <div><strong>Bairro atual:</strong> ${safeBairro}</div>
+              ${isResolved ? `<div class="status-badge">Concluído: ${resolvedText || "bairro corrigido"}</div>` : ""}
+              <div><strong>Título:</strong> ${safeTitulo}</div>
+              <div><strong>LinkReal:</strong> ${safeLink ? `<a href="${safeLink}" target="_blank" rel="noopener noreferrer">${safeLink}</a>` : "(sem link)"}</div>
+            </div>
+            <div class="issue-fix">
+              <div><strong>Cidade do registro</strong></div>
+              <div class="issue-fix-row">
+                <select data-role="targetCidade">
+                  <option value="">Selecione uma cidade...</option>
+                  ${getBairroJsonCityOptionsMarkup(issue.cidade)}
+                </select>
+                <span></span>
+              </div>
+              <div><strong>Opção 1: atribuir bairro já existente</strong></div>
+              <div class="issue-fix-row">
+                <select data-role="assignSlug">
+                  <option value="">Selecione um bairro...</option>
+                  ${getBairroJsonOptionsMarkup(issue.cidade)}
+                </select>
+                <button data-action="assign" class="primary" ${isResolved ? "disabled" : ""}>Aplicar</button>
+              </div>
+
+              <div><strong>Opção 2: criar novo bairro e aplicar</strong></div>
+              <div class="issue-fix-row">
+                <input data-role="newNome" placeholder="Nome do bairro (ex: Centro)" />
+                <span></span>
+              </div>
+              <div class="issue-fix-row">
+                <input data-role="newSlug" placeholder="Slug (opcional, ex: centro)" />
+                <button data-action="create" class="primary" ${isResolved ? "disabled" : ""}>Criar e aplicar</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      bairroJsonIssuesEl.querySelectorAll(".issue-card").forEach((card) => {
+        const key = Number(card.getAttribute("data-key"));
+        const issue = bairroJsonIssues[key];
+        const assignBtn = card.querySelector("button[data-action='assign']");
+        const createBtn = card.querySelector("button[data-action='create']");
+        const targetCidadeSelect = card.querySelector("select[data-role='targetCidade']");
+        const assignSlugSelect = card.querySelector("select[data-role='assignSlug']");
+
+        if (targetCidadeSelect && assignSlugSelect) {
+          targetCidadeSelect.addEventListener("change", () => {
+            assignSlugSelect.innerHTML = `<option value="">Selecione um bairro...</option>${getBairroJsonOptionsMarkup(targetCidadeSelect.value)}`;
+          });
+        }
+
+        if (assignBtn) {
+          assignBtn.addEventListener("click", async () => {
+            try {
+              const targetSlug = card.querySelector("select[data-role='assignSlug']").value.trim();
+              const targetCidade = targetCidadeSelect.value.trim();
+              if (!targetCidade) {
+                appendLog("[BAIRROS-JSON] Selecione a cidade correta.", "warn");
+                return;
+              }
+              if (!targetSlug) {
+                appendLog("[BAIRROS-JSON] Selecione um bairro para atribuir.", "warn");
+                return;
+              }
+              const result = await resolveBairroJsonIssue(issue, "assign", { targetSlug, targetCidade });
+              appendLog(`[BAIRROS-JSON] ${issue.file}: bairro corrigido para ${result.bairro} (cidade ${targetCidade}).`, "success");
+              if (result.firestore) {
+                appendLog(`[BAIRROS-JSON] Firestore: origem ${result.firestore.sourceUpdated || 0}, público ${result.firestore.publicUpdated || 0}.`, "success");
+              }
+              bairroJsonIssues[key] = { ...issue, _resolved: true, _resolvedBairro: result.bairro, _resolvedCidade: targetCidade };
+              renderBairroJsonIssues();
+            } catch (err) {
+              appendLog(`[BAIRROS-JSON] Erro: ${err.message}`, "error");
+            }
+          });
+        }
+
+        if (createBtn) {
+          createBtn.addEventListener("click", async () => {
+            try {
+              const targetNome = card.querySelector("input[data-role='newNome']").value.trim();
+              const targetSlug = card.querySelector("input[data-role='newSlug']").value.trim();
+              const targetCidade = targetCidadeSelect.value.trim();
+              if (!targetCidade) {
+                appendLog("[BAIRROS-JSON] Selecione a cidade correta.", "warn");
+                return;
+              }
+              if (!targetNome && !targetSlug) {
+                appendLog("[BAIRROS-JSON] Informe nome ou slug para criar o bairro.", "warn");
+                return;
+              }
+              const result = await resolveBairroJsonIssue(issue, "create", { targetNome, targetSlug, targetCidade });
+              appendLog(`[BAIRROS-JSON] ${issue.file}: novo bairro ${result.bairro} criado e aplicado (cidade ${targetCidade}).`, "success");
+              if (result.firestore) {
+                appendLog(`[BAIRROS-JSON] Firestore: origem ${result.firestore.sourceUpdated || 0}, público ${result.firestore.publicUpdated || 0}.`, "success");
+              }
+              const cidadeOptions = bairroJsonOptions[targetCidade] || (bairroJsonOptions[targetCidade] = []);
+              if (!cidadeOptions.some((opt) => opt.slug === result.bairro)) {
+                cidadeOptions.push({ slug: result.bairro, nome: result.nome, cidade: targetCidade });
+                cidadeOptions.sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+              }
+              bairroJsonIssues[key] = { ...issue, _resolved: true, _resolvedBairro: result.bairro, _resolvedCidade: targetCidade };
+              renderBairroJsonIssues();
+            } catch (err) {
+              appendLog(`[BAIRROS-JSON] Erro: ${err.message}`, "error");
+            }
+          });
+        }
+      });
+    }
+
+    async function resolveBairroJsonIssue(issue, mode, payload) {
+      const res = await fetch("/api/bairro-json-issues/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: issue.file, linkReal: issue.linkReal, mode, ...payload })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Falha ao corrigir bairro no JSON.");
+      }
+
+      return data;
+    }
+
+    function renderBairroJsonPagination() {
+      if (!bairroJsonTotal) return;
+      const start = bairroJsonOffset + 1;
+      const end = bairroJsonOffset + bairroJsonIssues.length;
+      const pagination = document.createElement("div");
+      pagination.className = "issue-empty";
+      pagination.textContent = `Exibindo ${start}-${end} de ${bairroJsonTotal} pendências.`;
+      if (bairroJsonOffset > 0) {
+        const previous = document.createElement("button");
+        previous.textContent = "Página anterior";
+        previous.addEventListener("click", () => loadBairroJsonIssues(bairroJsonOffset - 100));
+        pagination.appendChild(previous);
+      }
+      if (bairroJsonHasMore) {
+        const next = document.createElement("button");
+        next.textContent = "Próxima página";
+        next.addEventListener("click", () => loadBairroJsonIssues(bairroJsonOffset + 100));
+        pagination.appendChild(next);
+      }
+      bairroJsonIssuesEl.appendChild(pagination);
+    }
+
+    async function loadBairroJsonIssues(offset = 0) {
+      bairroJsonSummary.textContent = "Checando bairros no JSON...";
+      bairroJsonIssuesEl.innerHTML = `<div class="issue-empty">Buscando registros...</div>`;
+      const res = await fetch(`/api/bairro-json-issues?offset=${offset}&limit=100`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Falha ao checar bairros no JSON.");
+
+      bairroJsonOptions = data.bairroOptions && typeof data.bairroOptions === "object" ? data.bairroOptions : {};
+      bairroJsonCityOptions = Array.isArray(data.cityOptions) ? data.cityOptions : [];
+      bairroJsonIssues = Array.isArray(data.issues) ? data.issues : [];
+      bairroJsonTotal = Number(data.total || 0);
+      bairroJsonOffset = Number(data.offset || 0);
+      bairroJsonHasMore = Boolean(data.hasMore);
+      bairroJsonTotalByMotivo = data.totalByMotivo && typeof data.totalByMotivo === "object" ? data.totalByMotivo : {};
+      renderBairroJsonIssues();
+      renderBairroJsonPagination();
+      if (data.correctionsApplied > 0) {
+        appendLog(`[BAIRROS-JSON] ${data.correctionsApplied} correção(ões) manual(is) reaplicada(s) aos JSONs antes da checagem.`, "success");
+      }
+      appendLog(`[BAIRROS-JSON] Checagem concluída: ${data.total} pendência(s) encontrada(s).`, "info");
+    }
+
+    btnCheckBairroJson.addEventListener("click", async () => {
+      try {
+        await loadBairroJsonIssues();
+      } catch (err) {
+        bairroJsonSummary.textContent = "Falha ao checar bairros no JSON.";
+        bairroJsonIssuesEl.innerHTML = `<div class="issue-empty">${escapeHtml(err.message)}</div>`;
+        appendLog(`[BAIRROS-JSON] ${err.message}`, "error");
+      }
+    });
+
+    // ==========================================================
+    // Checkar Título (dados brutos dos crawlers - JSON)
+    // ==========================================================
+    const btnCheckTituloJson = document.getElementById("btnCheckTituloJson");
+    const tituloJsonSummary = document.getElementById("tituloJsonSummary");
+    const tituloJsonIssuesEl = document.getElementById("tituloJsonIssues");
+    const tituloJsonCountBadge = document.getElementById("tituloJsonCountBadge");
+
+    function tituloMotivoLabel(motivo) {
+      return "Título vazio";
+    }
+
+    function renderTituloJsonIssues(issues) {
+      tituloJsonSummary.textContent = `Registros com título pendente: ${issues.length}`;
+      tituloJsonCountBadge.textContent = `${issues.length} pendente${issues.length === 1 ? "" : "s"}`;
+      if (!issues.length) {
+        tituloJsonIssuesEl.innerHTML = `<div class="issue-empty">Nenhum título pendente encontrado.</div>`;
+        return;
+      }
+
+      tituloJsonIssuesEl.innerHTML = issues.map((issue) => {
+        const link = escapeHtml(issue.linkReal || "");
+        return `
+          <div class="issue-card">
+            <div class="issue-meta">
+              <div><strong>Arquivo:</strong> ${escapeHtml(issue.file)}</div>
+              <div><strong>Negocia??o:</strong> ${negociacaoArquivo(issue.file)}</div>
+              <div><strong>Motivo:</strong> ${tituloMotivoLabel(issue.motivo)}</div>
+              <div><strong>Título:</strong> ${escapeHtml(issue.titulo || "(vazio)")}</div>
+              <div><strong>Tipo atual:</strong> ${escapeHtml(issue.tipoImovel || "(vazio)")}</div>
+              <div><strong>Cidade:</strong> ${escapeHtml(issue.cidade || "(vazia)")}</div>
+              <div><strong>Bairro:</strong> ${escapeHtml(issue.bairro || "(vazio)")}</div>
+              <div><strong>LinkReal:</strong> ${link ? `<a href="${link}" target="_blank" rel="noopener noreferrer">${link}</a>` : "(sem link)"}</div>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    btnCheckTituloJson.addEventListener("click", async () => {
+      tituloJsonSummary.textContent = "Checando títulos no JSON...";
+      tituloJsonIssuesEl.innerHTML = `<div class="issue-empty">Buscando registros...</div>`;
+      try {
+        const res = await fetch("/api/titulo-json-issues");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao checar títulos no JSON.");
+        const issues = Array.isArray(data.issues) ? data.issues : [];
+        renderTituloJsonIssues(issues);
+        appendLog(`[TITULOS-JSON] Checagem concluída: ${data.total} pendência(s) encontrada(s).`, "info");
+      } catch (err) {
+        tituloJsonSummary.textContent = "Falha ao checar títulos no JSON.";
+        tituloJsonIssuesEl.innerHTML = `<div class="issue-empty">${escapeHtml(err.message)}</div>`;
+        appendLog(`[TITULOS-JSON] ${err.message}`, "error");
+      }
+    });
+
+    // ==========================================================
+    // Checkar Localização (dados brutos dos crawlers - JSON)
+    // ==========================================================
+    const btnCheckLocalizacaoJson = document.getElementById("btnCheckLocalizacaoJson");
+    const localizacaoJsonSummary = document.getElementById("localizacaoJsonSummary");
+    const localizacaoJsonIssuesEl = document.getElementById("localizacaoJsonIssues");
+    const localizacaoJsonCountBadge = document.getElementById("localizacaoJsonCountBadge");
+
+    function renderLocalizacaoJsonIssues(issues) {
+      localizacaoJsonSummary.textContent = `Registros com localização vazia: ${issues.length}`;
+      localizacaoJsonCountBadge.textContent = `${issues.length} pendente${issues.length === 1 ? "" : "s"}`;
+      if (!issues.length) {
+        localizacaoJsonIssuesEl.innerHTML = `<div class="issue-empty">Nenhuma localização vazia encontrada.</div>`;
+        return;
+      }
+
+      localizacaoJsonIssuesEl.innerHTML = issues.map((issue, index) => {
+        const link = escapeHtml(issue.linkReal || "");
+        return `
+          <div class="issue-card" data-key="${index}">
+            <div class="issue-meta">
+              <div><strong>Arquivo:</strong> ${escapeHtml(issue.file)}</div>
+              <div><strong>Negocia??o:</strong> ${negociacaoArquivo(issue.file)}</div>
+              <div><strong>Localização:</strong> (vazia)</div>
+              <div><strong>Título:</strong> ${escapeHtml(issue.titulo || "(vazio)")}</div>
+              <div><strong>Tipo atual:</strong> ${escapeHtml(issue.tipoImovel || "(vazio)")}</div>
+              <div><strong>Cidade:</strong> ${escapeHtml(issue.cidade || "(vazia)")}</div>
+              <div><strong>Bairro:</strong> ${escapeHtml(issue.bairro || "(vazio)")}</div>
+              <div><strong>LinkReal:</strong> ${link ? `<a href="${link}" target="_blank" rel="noopener noreferrer">${link}</a>` : "(sem link)"}</div>
+            </div>
+            <div class="issue-fix">
+              <div><strong>Informar localização</strong></div>
+              <div class="issue-fix-row">
+                <input data-role="localizacao" placeholder="Ex.: Centro, Juiz de Fora - MG" />
+                <button data-action="save" class="primary">Salvar</button>
+              </div>
+            </div>
+          </div>`;
+      }).join("");
+
+      localizacaoJsonIssuesEl.querySelectorAll(".issue-card").forEach((card) => {
+        const issue = issues[Number(card.dataset.key)];
+        const button = card.querySelector("button[data-action='save']");
+        button.addEventListener("click", async () => {
+          const localizacao = card.querySelector("input[data-role='localizacao']").value.trim();
+          if (!localizacao) {
+            appendLog("[LOCALIZACAO-JSON] Informe uma localização.", "warn");
+            return;
+          }
+          button.disabled = true;
+          try {
+            const res = await fetch("/api/localizacao-json-issues/resolve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ file: issue.file, linkReal: issue.linkReal, localizacao }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Falha ao salvar localização.");
+            appendLog(`[LOCALIZACAO-JSON] ${issue.file}: localização corrigida.`, "success");
+            if (data.firestore) {
+              appendLog(`[LOCALIZACAO-JSON] Firestore: origem ${data.firestore.sourceUpdated || 0}, público ${data.firestore.publicUpdated || 0}.`, "success");
+            }
+            issues.splice(Number(card.dataset.key), 1);
+            renderLocalizacaoJsonIssues(issues);
+          } catch (err) {
+            appendLog(`[LOCALIZACAO-JSON] ${err.message}`, "error");
+            button.disabled = false;
+          }
+        });
+      });
+    }
+
+    btnCheckLocalizacaoJson.addEventListener("click", async () => {
+      localizacaoJsonSummary.textContent = "Checando localizações no JSON...";
+      localizacaoJsonIssuesEl.innerHTML = `<div class="issue-empty">Buscando registros...</div>`;
+      try {
+        const res = await fetch("/api/localizacao-json-issues");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao checar localizações no JSON.");
+        const issues = Array.isArray(data.issues) ? data.issues : [];
+        renderLocalizacaoJsonIssues(issues);
+        appendLog(`[LOCALIZACAO-JSON] Checagem concluída: ${data.total} pendência(s) encontrada(s).`, "info");
+      } catch (err) {
+        localizacaoJsonSummary.textContent = "Falha ao checar localizações no JSON.";
+        localizacaoJsonIssuesEl.innerHTML = `<div class="issue-empty">${escapeHtml(err.message)}</div>`;
+        appendLog(`[LOCALIZACAO-JSON] ${err.message}`, "error");
+      }
+    });
+
+    // ==========================================================
+    // Checkar linkFoto (dados brutos dos crawlers - JSON)
+    // ==========================================================
+    const btnCheckLinkFotoJson = document.getElementById("btnCheckLinkFotoJson");
+    const btnConfirmAllLinkFotoJson = document.getElementById("btnConfirmAllLinkFotoJson");
+    const linkFotoJsonSummary = document.getElementById("linkFotoJsonSummary");
+    const linkFotoJsonIssuesEl = document.getElementById("linkFotoJsonIssues");
+    const linkFotoJsonCountBadge = document.getElementById("linkFotoJsonCountBadge");
+
+    function renderLinkFotoJsonIssues(issues, projectStats = []) {
+      linkFotoJsonSummary.textContent = `Registros com linkFoto vazio: ${issues.length}`;
+      linkFotoJsonCountBadge.textContent = `${issues.length} pendente${issues.length === 1 ? "" : "s"}`;
+      const criticalProjects = projectStats.filter((project) => project.emptyLinkFotoPercentage > 50);
+      const alertsMarkup = criticalProjects.length
+        ? `<div class="linkfoto-alerts">${criticalProjects.map((project) => `
+            <div class="linkfoto-alert"><strong>Atenção: ${escapeHtml(project.file)}</strong> possui ${project.emptyLinkFotoCount} de ${project.total} links de foto vazios (${project.emptyLinkFotoPercentage.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%). Avalie se a origem não disponibiliza imagens ou se a raspagem precisa ser corrigida.</div>
+          `).join("")}</div>`
+        : "";
+      if (!issues.length) {
+        linkFotoJsonIssuesEl.innerHTML = `${alertsMarkup}<div class="issue-empty">Nenhum linkFoto vazio encontrado.</div>`;
+        return;
+      }
+
+      linkFotoJsonIssuesEl.innerHTML = `${alertsMarkup}${issues.map((issue, index) => {
+        const link = escapeHtml(issue.linkReal || "");
+        return `
+          <div class="issue-card" data-key="${index}">
+            <div class="issue-meta">
+              <div><strong>Arquivo:</strong> ${escapeHtml(issue.file)}</div>
+              <div><strong>Negocia??o:</strong> ${negociacaoArquivo(issue.file)}</div>
+              <div><strong>linkFoto:</strong> (vazio)</div>
+              <div><strong>Título:</strong> ${escapeHtml(issue.titulo || "(vazio)")}</div>
+              <div><strong>Tipo:</strong> ${escapeHtml(issue.tipoImovel || "(vazio)")}</div>
+              <div><strong>Cidade:</strong> ${escapeHtml(issue.cidade || "(vazia)")}</div>
+              <div><strong>Bairro:</strong> ${escapeHtml(issue.bairro || "(vazio)")}</div>
+              <div><strong>LinkReal:</strong> ${link ? `<a href="${link}" target="_blank" rel="noopener noreferrer">${link}</a>` : "(sem link)"}</div>
+            </div>
+            <div class="issue-actions" style="margin-top: 12px;">
+              <input class="linkfoto-manual-input" type="url" placeholder="Cole o link direto da foto" aria-label="Link manual da foto" style="width: 100%; margin-bottom: 8px;" />
+              <button class="primary btn-resolve-linkfoto" data-file="${escapeHtml(issue.file)}" data-link-real="${link}">Salvar link da foto</button>
+              <button class="btn-confirm-linkfoto" title="Marcar somente este imovel como revisado sem foto">Confirmar sem foto</button>
+              <div class="error-message" data-role="error" role="status"></div>
+            </div>
+          </div>`;
+          }).join("")}`;
+
+      linkFotoJsonIssuesEl.querySelectorAll(".btn-confirm-linkfoto").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const card = button.closest(".issue-card");
+          const issue = issues[Number(card.dataset.key)];
+          const error = card.querySelector('[data-role="error"]');
+          error.textContent = "";
+          button.disabled = true;
+          button.textContent = "Confirmando...";
+          try {
+            const res = await fetch("/api/linkfoto-json-issues/confirm", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ file: issue.file, linkReal: issue.linkReal, index: issue.index, confirmacao: true }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Falha ao confirmar registro sem foto.");
+            appendLog(`[LINKFOTO-JSON] Registro confirmado sem foto em ${issue.file}.`, "success");
+            issues.splice(Number(card.dataset.key), 1);
+            renderLinkFotoJsonIssues(issues, projectStats);
+          } catch (err) {
+            error.textContent = err.message;
+            appendLog(`[LINKFOTO-JSON] ${err.message}`, "error");
+            button.disabled = false;
+            button.textContent = "Confirmar sem foto";
+          }
+        });
+      });
+
+      linkFotoJsonIssuesEl.querySelectorAll(".btn-resolve-linkfoto").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const card = button.closest(".issue-card");
+          const input = card?.querySelector(".linkfoto-manual-input");
+          const linkFoto = String(input?.value || "").trim();
+          if (!linkFoto) {
+            input?.focus();
+            appendLog("[LINKFOTO-JSON] Informe o link da foto.", "error");
+            return;
+          }
+
+          button.disabled = true;
+          button.textContent = "Salvando...";
+          try {
+            const res = await fetch("/api/linkfoto-json-issues/resolve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                file: button.dataset.file,
+                linkReal: button.dataset.linkReal,
+                linkFoto,
+              }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Falha ao salvar o link da foto.");
+            appendLog(`[LINKFOTO-JSON] Link de foto salvo em ${data.file}.`, "success");
+            if (data.firestore) {
+              appendLog(`[LINKFOTO-JSON] Firestore: origem ${data.firestore.sourceUpdated || 0}, público ${data.firestore.publicUpdated || 0}.`, "success");
+            }
+            issues.splice(Number(card.dataset.key), 1);
+            renderLinkFotoJsonIssues(issues, projectStats);
+          } catch (err) {
+            appendLog(`[LINKFOTO-JSON] ${err.message}`, "error");
+            button.disabled = false;
+            button.textContent = "Salvar link da foto";
+          }
+        });
+      });
+    }
+
+    btnCheckLinkFotoJson.addEventListener("click", async () => {
+      linkFotoJsonSummary.textContent = "Checando linkFoto no JSON...";
+      linkFotoJsonIssuesEl.innerHTML = `<div class="issue-empty">Buscando registros...</div>`;
+      try {
+        const res = await fetch("/api/linkfoto-json-issues");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao checar linkFoto no JSON.");
+        renderLinkFotoJsonIssues(Array.isArray(data.issues) ? data.issues : [], Array.isArray(data.projectStats) ? data.projectStats : []);
+        appendLog(`[LINKFOTO-JSON] Checagem concluída: ${data.total} pendência(s) encontrada(s).`, "info");
+      } catch (err) {
+        linkFotoJsonSummary.textContent = "Falha ao checar linkFoto no JSON.";
+        linkFotoJsonIssuesEl.innerHTML = `<div class="issue-empty">${escapeHtml(err.message)}</div>`;
+        appendLog(`[LINKFOTO-JSON] ${err.message}`, "error");
+      }
+    });
+
+    btnConfirmAllLinkFotoJson.addEventListener("click", async () => {
+      if (!window.confirm("Confirmar todos os registros sem link de foto? Eles deixarão de aparecer como pendentes.")) return;
+
+      btnConfirmAllLinkFotoJson.disabled = true;
+      try {
+        const res = await fetch("/api/linkfoto-json-issues/confirm-all", { method: "POST" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao confirmar registros sem foto.");
+        appendLog(`[LINKFOTO-JSON] ${data.confirmed} registro(s) confirmado(s) sem foto.`, "success");
+        btnCheckLinkFotoJson.click();
+      } catch (err) {
+        appendLog(`[LINKFOTO-JSON] ${err.message}`, "error");
+      } finally {
+        btnConfirmAllLinkFotoJson.disabled = false;
+      }
+    });
+
+    // ==========================================================
+    // Checkar linkReal (dados brutos dos crawlers - JSON)
+    // ==========================================================
+    const btnCheckLinkRealJson = document.getElementById("btnCheckLinkRealJson");
+    const linkRealJsonSummary = document.getElementById("linkRealJsonSummary");
+    const linkRealJsonIssuesEl = document.getElementById("linkRealJsonIssues");
+    const linkRealJsonCountBadge = document.getElementById("linkRealJsonCountBadge");
+
+    function renderLinkRealJsonIssues(issues) {
+      linkRealJsonSummary.textContent = `Registros com linkReal vazio: ${issues.length}`;
+      linkRealJsonCountBadge.textContent = `${issues.length} pendente${issues.length === 1 ? "" : "s"}`;
+      if (!issues.length) {
+        linkRealJsonIssuesEl.innerHTML = `<div class="issue-empty">Nenhum linkReal vazio encontrado.</div>`;
+        return;
+      }
+
+      linkRealJsonIssuesEl.innerHTML = issues.map((issue) => {
+        const foto = escapeHtml(issue.linkFoto || "");
+        return `
+          <div class="issue-card">
+            <div class="issue-meta">
+              <div><strong>Arquivo:</strong> ${escapeHtml(issue.file)}</div>
+              <div><strong>Negocia??o:</strong> ${negociacaoArquivo(issue.file)}</div>
+              <div><strong>linkReal:</strong> (vazio)</div>
+              <div><strong>Título:</strong> ${escapeHtml(issue.titulo || "(vazio)")}</div>
+              <div><strong>Tipo:</strong> ${escapeHtml(issue.tipoImovel || "(vazio)")}</div>
+              <div><strong>Cidade:</strong> ${escapeHtml(issue.cidade || "(vazia)")}</div>
+              <div><strong>Bairro:</strong> ${escapeHtml(issue.bairro || "(vazio)")}</div>
+              <div><strong>linkFoto:</strong> ${foto ? `<a href="${foto}" target="_blank" rel="noopener noreferrer">${foto}</a>` : "(sem link)"}</div>
+            </div>
+          </div>`;
+      }).join("");
+    }
+
+    btnCheckLinkRealJson.addEventListener("click", async () => {
+      linkRealJsonSummary.textContent = "Checando linkReal no JSON...";
+      linkRealJsonIssuesEl.innerHTML = `<div class="issue-empty">Buscando registros...</div>`;
+      try {
+        const res = await fetch("/api/linkreal-json-issues");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao checar linkReal no JSON.");
+        renderLinkRealJsonIssues(Array.isArray(data.issues) ? data.issues : []);
+        appendLog(`[LINKREAL-JSON] Checagem concluída: ${data.total} pendência(s) encontrada(s).`, "info");
+      } catch (err) {
+        linkRealJsonSummary.textContent = "Falha ao checar linkReal no JSON.";
+        linkRealJsonIssuesEl.innerHTML = `<div class="issue-empty">${escapeHtml(err.message)}</div>`;
+        appendLog(`[LINKREAL-JSON] ${err.message}`, "error");
+      }
+    });
+
+    // ==========================================================
+    // Checkar Tipo Imóvel (dados brutos dos crawlers - JSON)
+    // ==========================================================
+    const btnCheckTipoImovelJson = document.getElementById("btnCheckTipoImovelJson");
+    const tipoImovelJsonSummary = document.getElementById("tipoImovelJsonSummary");
+    const tipoImovelJsonIssuesEl = document.getElementById("tipoImovelJsonIssues");
+    const tipoImovelJsonCountBadge = document.getElementById("tipoImovelJsonCountBadge");
+    let tipoImovelJsonOptions = [];
+
+    function getTipoImovelJsonOptionsMarkup() {
+      return tipoImovelJsonOptions
+        .map((item) => `<option value="${escapeHtml(item.slug)}">${escapeHtml(item.nome)} (${escapeHtml(item.slug)})</option>`)
+        .join("");
+    }
+
+    function renderTipoImovelJsonIssues(issues, totals = {}) {
+      const vazios = totals.vazios ?? issues.filter((issue) => issue.motivo === "vazio").length;
+      const foraDoCatalogo = totals.foraDoCatalogo ?? issues.filter((issue) => issue.motivo === "fora-do-catalogo").length;
+      tipoImovelJsonSummary.textContent = `Pendências: ${issues.length}. Vazios: ${vazios}. Fora do catálogo: ${foraDoCatalogo}.`;
+      tipoImovelJsonCountBadge.textContent = `${issues.length} pendente${issues.length === 1 ? "" : "s"}`;
+      if (!issues.length) {
+        tipoImovelJsonIssuesEl.innerHTML = `<div class="issue-empty">Nenhum tipo de imóvel fora do padrão encontrado.</div>`;
+        return;
+      }
+
+      tipoImovelJsonIssuesEl.innerHTML = issues.map((issue, index) => {
+        const link = escapeHtml(issue.linkReal || "");
+        return `
+          <div class="issue-card" data-key="${index}">
+            <div class="issue-meta">
+              <div><strong>Arquivo:</strong> ${escapeHtml(issue.file)}</div>
+              <div><strong>Negocia??o:</strong> ${negociacaoArquivo(issue.file)}</div>
+              <div><strong>Tipo Imóvel:</strong> ${escapeHtml(issue.tipoImovel || "(vazio)")}</div>
+              <div><strong>Motivo:</strong> ${issue.motivo === "fora-do-catalogo" ? "Fora do catálogo _brTipoImovel.json" : "Vazio"}</div>
+              <div><strong>Título:</strong> ${escapeHtml(issue.titulo || "(vazio)")}</div>
+              <div><strong>Localização:</strong> ${escapeHtml(issue.localizacao || "(vazia)")}</div>
+              <div><strong>Cidade:</strong> ${escapeHtml(issue.cidade || "(vazia)")}</div>
+              <div><strong>Bairro:</strong> ${escapeHtml(issue.bairro || "(vazio)")}</div>
+              <div><strong>LinkReal:</strong> ${link ? `<a href="${link}" target="_blank" rel="noopener noreferrer">${link}</a>` : "(sem link)"}</div>
+            </div>
+            <div class="issue-fix">
+              <div><strong>Atribuir tipo de imóvel</strong></div>
+              <div class="issue-fix-row">
+                <select data-role="tipoImovel">
+                  <option value="">Selecione um tipo...</option>
+                  ${getTipoImovelJsonOptionsMarkup()}
+                </select>
+                <button data-action="assign" class="primary">Aplicar</button>
+              </div>
+            </div>
+          </div>`;
+      }).join("");
+
+      tipoImovelJsonIssuesEl.querySelectorAll(".issue-card").forEach((card) => {
+        const issue = issues[Number(card.dataset.key)];
+        const button = card.querySelector("button[data-action='assign']");
+        button.addEventListener("click", async () => {
+          const tipoImovel = card.querySelector("select[data-role='tipoImovel']").value.trim();
+          if (!tipoImovel) {
+            appendLog("[TIPO-IMOVEL-JSON] Selecione um tipo de imóvel.", "warn");
+            return;
+          }
+          button.disabled = true;
+          try {
+            const res = await fetch("/api/tipo-imovel-json-issues/resolve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ file: issue.file, linkReal: issue.linkReal, tipoImovel }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Falha ao salvar tipo de imóvel.");
+            appendLog(`[TIPO-IMOVEL-JSON] ${issue.file}: tipo corrigido para ${data.tipoImovel}.`, "success");
+            if (data.firestore) {
+              appendLog(`[TIPO-IMOVEL-JSON] Firestore: origem ${data.firestore.sourceUpdated || 0}, público ${data.firestore.publicUpdated || 0}.`, "success");
+            }
+            issues.splice(Number(card.dataset.key), 1);
+            renderTipoImovelJsonIssues(issues);
+          } catch (err) {
+            appendLog(`[TIPO-IMOVEL-JSON] ${err.message}`, "error");
+            button.disabled = false;
+          }
+        });
+      });
+    }
+
+    btnCheckTipoImovelJson.addEventListener("click", async () => {
+      tipoImovelJsonSummary.textContent = "Checando tipos de imóvel no JSON...";
+      tipoImovelJsonIssuesEl.innerHTML = `<div class="issue-empty">Buscando registros...</div>`;
+      try {
+        const res = await fetch("/api/tipo-imovel-json-issues");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao checar tipos de imóvel no JSON.");
+        const issues = Array.isArray(data.issues) ? data.issues : [];
+        tipoImovelJsonOptions = Array.isArray(data.typeOptions) ? data.typeOptions : [];
+        renderTipoImovelJsonIssues(issues, { vazios: data.totalVazios, foraDoCatalogo: data.totalForaDoCatalogo });
+        appendLog(`[TIPO-IMOVEL-JSON] Checagem concluída: ${data.total} pendência(s), ${data.totalForaDoCatalogo || 0} fora do catálogo.`, "info");
+      } catch (err) {
+        tipoImovelJsonSummary.textContent = "Falha ao checar tipos de imóvel no JSON.";
+        tipoImovelJsonIssuesEl.innerHTML = `<div class="issue-empty">${escapeHtml(err.message)}</div>`;
+        appendLog(`[TIPO-IMOVEL-JSON] ${err.message}`, "error");
+      }
+    });
+
+    // ==========================================================
+    // Checkar Preço (dados brutos dos crawlers - JSON)
+    // ==========================================================
+    const precoJsonSummary = document.getElementById("precoJsonSummary");
+    const precoJsonIssuesEl = document.getElementById("precoJsonIssues");
+    const precoJsonCountBadge = document.getElementById("precoJsonCountBadge");
+    const btnConfirmAllPrecoJson = document.getElementById("btnConfirmAllPrecoJson");
+    const btnCheckPrecoJson = document.getElementById("btnCheckPrecoJson");
+    const precoJsonBatchProgress = document.getElementById("precoJsonBatchProgress");
+    const precoJsonBatchProgressLabel = document.getElementById("precoJsonBatchProgressLabel");
+
+    function formatPrecoJson(valor) {
+      return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor);
+    }
+
+    function setPrecoJsonBatchProgress(active, message = "") {
+      precoJsonBatchProgress.classList.toggle("visible", active);
+      precoJsonBatchProgressLabel.textContent = message;
+      btnConfirmAllPrecoJson.disabled = active;
+      btnCheckPrecoJson.disabled = active;
+    }
+
+    function renderPrecoJsonIssues(issues) {
+      const zeros = issues.filter((issue) => issue.motivo === "zero").length;
+      const acimaLimite = issues.length - zeros;
+      precoJsonSummary.textContent = `Preços pendentes: ${zeros} iguais a zero, ${acimaLimite} acima de R$ 10 milhões.`;
+      precoJsonCountBadge.textContent = `${issues.length} pendente${issues.length === 1 ? "" : "s"}`;
+      btnConfirmAllPrecoJson.hidden = !issues.length;
+      btnConfirmAllPrecoJson.textContent = `Confirmar todos os preços (${issues.length})`;
+      if (!issues.length) {
+        precoJsonIssuesEl.innerHTML = `<div class="issue-empty">Nenhum preço fora do padrão encontrado.</div>`;
+        return;
+      }
+
+      precoJsonIssuesEl.innerHTML = issues.map((issue, index) => {
+        const link = escapeHtml(issue.linkReal || "");
+        const motivo = issue.motivo === "zero" ? "Preço igual a zero" : "Preço acima de R$ 10 milhões";
+        return `
+          <div class="issue-card" data-key="${index}">
+            <div class="issue-meta">
+              <div><strong>Arquivo:</strong> ${escapeHtml(issue.file)}</div>
+              <div><strong>Negocia??o:</strong> ${negociacaoArquivo(issue.file)}</div>
+              <div><strong>Motivo:</strong> ${motivo}</div>
+              <div><strong>Preço:</strong> ${formatPrecoJson(issue.preco)}</div>
+              <div><strong>Título:</strong> ${escapeHtml(issue.titulo || "(vazio)")}</div>
+              <div><strong>Tipo:</strong> ${escapeHtml(issue.tipoImovel || "(vazio)")}</div>
+              <div><strong>Localização:</strong> ${escapeHtml(issue.localizacao || "(vazia)")}</div>
+              <div><strong>Cidade:</strong> ${escapeHtml(issue.cidade || "(vazia)")}</div>
+              <div><strong>Bairro:</strong> ${escapeHtml(issue.bairro || "(vazio)")}</div>
+              <div><strong>LinkReal:</strong> ${link ? `<a href="${link}" target="_blank" rel="noopener noreferrer">${link}</a>` : "(sem link)"}</div>
+            </div>
+            <div class="issue-fix">
+              <div><strong>Valor conferido</strong></div>
+              <div class="issue-fix-row">
+                <div class="sub">Confirma que ${formatPrecoJson(issue.preco)} é o valor correto?</div>
+                <button data-action="confirm" class="primary">Confirmar valor</button>
+              </div>
+              <div><strong>Corrigir valor manualmente</strong></div>
+              <div class="issue-fix-row">
+                <input data-role="preco" inputmode="decimal" placeholder="Ex.: 1250000 ou 1.250.000,00" />
+                <button data-action="save" class="primary">Salvar valor</button>
+              </div>
+            </div>
+          </div>`;
+      }).join("");
+
+      precoJsonIssuesEl.querySelectorAll(".issue-card").forEach((card) => {
+        const issue = issues[Number(card.dataset.key)];
+        const confirmButton = card.querySelector("button[data-action='confirm']");
+        const saveButton = card.querySelector("button[data-action='save']");
+        const removeIssue = () => {
+          issues.splice(Number(card.dataset.key), 1);
+          renderPrecoJsonIssues(issues);
+        };
+        confirmButton.addEventListener("click", async () => {
+          confirmButton.disabled = true;
+          try {
+            const res = await fetch("/api/preco-json-issues/confirm", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ file: issue.file, linkReal: issue.linkReal, preco: issue.preco }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Falha ao confirmar preço.");
+            appendLog(`[PRECO-JSON] ${issue.file}: valor confirmado.`, "success");
+            removeIssue();
+          } catch (err) {
+            appendLog(`[PRECO-JSON] ${err.message}`, "error");
+            confirmButton.disabled = false;
+          }
+        });
+        saveButton.addEventListener("click", async () => {
+          const preco = card.querySelector("input[data-role='preco']").value.trim();
+          if (!preco) {
+            appendLog("[PRECO-JSON] Informe um valor de preço.", "warn");
+            return;
+          }
+          saveButton.disabled = true;
+          try {
+            const res = await fetch("/api/preco-json-issues/resolve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ file: issue.file, linkReal: issue.linkReal, preco }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Falha ao salvar preço.");
+            appendLog(`[PRECO-JSON] ${issue.file}: preço corrigido para ${formatPrecoJson(data.preco)}.`, "success");
+            if (data.firestore) {
+              appendLog(`[PRECO-JSON] Firestore: origem ${data.firestore.sourceUpdated || 0}, público ${data.firestore.publicUpdated || 0}.`, "success");
+            }
+            removeIssue();
+          } catch (err) {
+            appendLog(`[PRECO-JSON] ${err.message}`, "error");
+            saveButton.disabled = false;
+          }
+        });
+      });
+    }
+
+    async function checkPrecoJson() {
+      precoJsonSummary.textContent = "Checando preços no JSON...";
+      precoJsonIssuesEl.innerHTML = `<div class="issue-empty">Buscando registros...</div>`;
+      btnConfirmAllPrecoJson.hidden = true;
+      setPrecoJsonBatchProgress(false);
+      try {
+        const res = await fetch("/api/preco-json-issues");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao checar preços no JSON.");
+        renderPrecoJsonIssues(Array.isArray(data.issues) ? data.issues : []);
+        appendLog(`[PRECO-JSON] Checagem concluída: ${data.total} pendência(s) encontrada(s).`, "info");
+      } catch (err) {
+        precoJsonSummary.textContent = "Falha ao checar preços no JSON.";
+        precoJsonIssuesEl.innerHTML = `<div class="issue-empty">${escapeHtml(err.message)}</div>`;
+        appendLog(`[PRECO-JSON] ${err.message}`, "error");
+      }
+    }
+
+    btnCheckPrecoJson.addEventListener("click", checkPrecoJson);
+    btnConfirmAllPrecoJson.addEventListener("click", async () => {
+      const count = Number.parseInt(precoJsonCountBadge.textContent, 10);
+      if (!Number.isSafeInteger(count) || count < 1) return;
+      if (!window.confirm(`Confirma que os ${count} preços pendentes estão corretos?`)) return;
+
+      setPrecoJsonBatchProgress(true, `Confirmando e salvando os ${count} preços pendentes...`);
+      precoJsonSummary.textContent = "A confirmação está em andamento. Aguarde a conclusão antes de fechar ou atualizar o painel.";
+      try {
+        const res = await fetch("/api/preco-json-issues/confirm-all", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmacao: true }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao confirmar preços.");
+        appendLog(`[PRECO-JSON] ${data.confirmed} preço(s) confirmado(s) em lote.`, "success");
+        renderPrecoJsonIssues([]);
+        precoJsonSummary.textContent = `${data.confirmed} preço(s) confirmado(s) e salvo(s).`;
+        setPrecoJsonBatchProgress(false);
+      } catch (err) {
+        appendLog(`[PRECO-JSON] ${err.message}`, "error");
+        precoJsonSummary.textContent = `Falha ao confirmar preços: ${err.message}`;
+        setPrecoJsonBatchProgress(false);
+      }
+    });
+
+    // ==========================================================
+    // Filtros: catalogos principais de cidades e bairros
+    // ==========================================================
+    const filterSubtabButtons = document.querySelectorAll(".filter-subtab-btn");
+    const filterSubtabPanels = {
+      cidade: document.getElementById("filterSubtabCidade"),
+      bairro: document.getElementById("filterSubtabBairro"),
+      tipo: document.getElementById("filterSubtabTipo"),
+    };
+    const filterCitiesList = document.getElementById("filterCitiesList");
+    const filterCitiesSummary = document.getElementById("filterCitiesSummary");
+    const filterCitiesCount = document.getElementById("filterCitiesCount");
+    const filterBairrosList = document.getElementById("filterBairrosList");
+    const filterBairrosSummary = document.getElementById("filterBairrosSummary");
+    const filterBairrosCount = document.getElementById("filterBairrosCount");
+    const filterTiposList = document.getElementById("filterTiposList");
+    const filterTiposSummary = document.getElementById("filterTiposSummary");
+    const filterTiposCount = document.getElementById("filterTiposCount");
+
+    function activateFilterSubtab(name) {
+      filterSubtabButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.filterSubtab === name));
+      Object.entries(filterSubtabPanels).forEach(([key, panel]) => panel.classList.toggle("active", key === name));
+    }
+
+    filterSubtabButtons.forEach((btn) => btn.addEventListener("click", () => activateFilterSubtab(btn.dataset.filterSubtab)));
+
+    async function updateFilterItem(kind, index, nome) {
+      const res = await fetch(`/api/filters/${kind}/${index}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Falha ao salvar filtro.");
+      return data;
+    }
+
+    async function updateCityPrincipal(index, principal, nome) {
+      const res = await fetch(`/api/filters/cities/${index}/principal`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ principal, nome }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Falha ao salvar cidade principal.");
+      return data;
+    }
+
+    async function updateBairroPrincipal(index, principal, nome) {
+      const res = await fetch(`/api/filters/bairros/${index}/principal`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ principal, nome }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Falha ao salvar bairro principal.");
+      return data;
+    }
+
+    async function updateTipoPrincipal(slug, aliasIndex, principal, nome) {
+      const res = await fetch(`/api/filters/tipos/${encodeURIComponent(slug)}/${aliasIndex}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ principal, nome }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Falha ao salvar tipo principal.");
+      return data;
+    }
+
+    function renderFilterCities(items, duplicates = [], missingPrincipals = []) {
+      const duplicateSlugs = new Set(duplicates.map((item) => item.slug));
+      filterCitiesCount.textContent = items.length + duplicateSlugs.size;
+      filterCitiesSummary.textContent = `${new Set(missingPrincipals.map((item) => item.slug)).size} slug${missingPrincipals.length === 1 ? " sem principal" : "s sem principal"}; ${duplicateSlugs.size} slug${duplicateSlugs.size === 1 ? " repetido" : "s repetidos"}; ${items.length} cidades principais sem repetição.`;
+      const duplicateRows = duplicates.map((item) => `
+        <tr data-index="${item.index}">
+          <td>${escapeHtml(item.slug)}</td>
+          <td><input data-role="nome" value="${escapeHtml(item.nome)}" /></td>
+          <td><select data-role="principal"><option value="sim" ${item.principal ? "selected" : ""}>Sim</option><option value="nao" ${item.principal ? "" : "selected"}>Não</option></select></td>
+          <td><button data-action="save-principal" class="primary">Salvar</button></td>
+        </tr>`).join("");
+      const missingPrincipalRows = missingPrincipals.map((item) => `
+        <tr data-index="${item.index}">
+          <td>${escapeHtml(item.slug)}</td>
+          <td><input data-role="nome" value="${escapeHtml(item.nome)}" /></td>
+          <td><select data-role="principal"><option value="sim">Sim</option><option value="nao" selected>Não</option></select></td>
+          <td><button data-action="save-principal" class="primary">Salvar</button></td>
+        </tr>`).join("");
+      const normalRows = items.map((item) => `
+        <tr data-index="${item.index}">
+          <td>${escapeHtml(item.slug)}</td>
+          <td><input data-role="nome" value="${escapeHtml(item.nome)}" /></td>
+          <td><button data-action="save" class="primary">Salvar</button></td>
+        </tr>`).join("");
+      filterCitiesList.innerHTML = `${missingPrincipals.length ? `<div class="filter-section-title">Sem cidade principal: selecione uma opção como Sim</div><table class="filters-table"><thead><tr><th>Slug</th><th>Nome</th><th>Principal</th><th></th></tr></thead><tbody>${missingPrincipalRows}</tbody></table>` : ""}${duplicates.length ? `<div class="filter-section-title">Slugs repetidos: defina apenas uma cidade como principal</div><table class="filters-table"><thead><tr><th>Slug</th><th>Nome</th><th>Principal</th><th></th></tr></thead><tbody>${duplicateRows}</tbody></table>` : ""}<div class="filter-section-title">Demais cidades principais</div><table class="filters-table"><thead><tr><th>Slug</th><th>Nome</th><th></th></tr></thead><tbody>${normalRows}</tbody></table>`;
+      filterCitiesList.querySelectorAll("button[data-action='save']").forEach((button) => button.addEventListener("click", async () => {
+        const row = button.closest("tr");
+        const nome = row.querySelector("input[data-role='nome']").value.trim();
+        if (!nome) return;
+        button.disabled = true;
+        try {
+          const data = await updateFilterItem("cities", row.dataset.index, nome);
+          appendLog(`[FILTROS] Cidade ${data.slug} atualizada no JSON e Firestore.`, "success");
+        } catch (err) {
+          appendLog(`[FILTROS] ${err.message}`, "error");
+        } finally {
+          button.disabled = false;
+        }
+      }));
+      filterCitiesList.querySelectorAll("button[data-action='save-principal']").forEach((button) => button.addEventListener("click", async () => {
+        const row = button.closest("tr");
+        const principal = row.querySelector("select[data-role='principal']").value === "sim";
+        const nome = row.querySelector("input[data-role='nome']").value.trim();
+        if (!nome) return;
+        button.disabled = true;
+        try {
+          const data = await updateCityPrincipal(row.dataset.index, principal, nome);
+          appendLog(`[FILTROS] Cidade ${data.slug} marcada como principal: ${data.principal ? "sim" : "não"}.`, "success");
+          await loadFilters();
+        } catch (err) {
+          appendLog(`[FILTROS] ${err.message}`, "error");
+        } finally {
+          button.disabled = false;
+        }
+      }));
+    }
+
+    function renderFilterBairros(items, duplicates = [], missingPrincipals = []) {
+      const duplicateKeys = new Set(duplicates.map((item) => `${item.slug}__${item.cidade}`));
+      filterBairrosCount.textContent = items.length + duplicateKeys.size;
+      filterBairrosSummary.textContent = `${new Set(missingPrincipals.map((item) => `${item.slug}__${item.cidade}`)).size} par${missingPrincipals.length === 1 ? " sem principal" : "es sem principal"}; ${duplicateKeys.size} par${duplicateKeys.size === 1 ? " repetido" : "es repetidos"}; ${items.length} bairros principais sem repetição.`;
+      const duplicateRows = duplicates.map((item) => `
+        <tr data-index="${item.index}">
+          <td>${escapeHtml(item.slug)}</td>
+          <td>${escapeHtml(item.cidade)}</td>
+          <td><input data-role="nome" value="${escapeHtml(item.nome)}" /></td>
+          <td><select data-role="principal"><option value="sim" ${item.principal ? "selected" : ""}>Sim</option><option value="nao" ${item.principal ? "" : "selected"}>Não</option></select></td>
+          <td><button data-action="save-principal" class="primary">Salvar</button></td>
+        </tr>`).join("");
+      const missingPrincipalRows = missingPrincipals.map((item) => `
+        <tr data-index="${item.index}">
+          <td>${escapeHtml(item.slug)}</td>
+          <td>${escapeHtml(item.cidade)}</td>
+          <td><input data-role="nome" value="${escapeHtml(item.nome)}" /></td>
+          <td><select data-role="principal"><option value="sim">Sim</option><option value="nao" selected>Não</option></select></td>
+          <td><button data-action="save-principal" class="primary">Salvar</button></td>
+        </tr>`).join("");
+      const normalRows = items.map((item) => `
+        <tr data-index="${item.index}">
+          <td>${escapeHtml(item.slug)}</td>
+          <td>${escapeHtml(item.cidade)}</td>
+          <td><input data-role="nome" value="${escapeHtml(item.nome)}" /></td>
+          <td><button data-action="save" class="primary">Salvar</button></td>
+        </tr>`).join("");
+      filterBairrosList.innerHTML = `${missingPrincipals.length ? `<div class="filter-section-title">Sem bairro principal: selecione uma opção como Sim</div><table class="filters-table"><thead><tr><th>Slug</th><th>Cidade</th><th>Nome</th><th>Principal</th><th></th></tr></thead><tbody>${missingPrincipalRows}</tbody></table>` : ""}${duplicates.length ? `<div class="filter-section-title">Bairros repetidos: defina apenas um como principal por cidade</div><table class="filters-table"><thead><tr><th>Slug</th><th>Cidade</th><th>Nome</th><th>Principal</th><th></th></tr></thead><tbody>${duplicateRows}</tbody></table>` : ""}<div class="filter-section-title">Demais bairros principais</div><table class="filters-table"><thead><tr><th>Slug</th><th>Cidade</th><th>Nome</th><th></th></tr></thead><tbody>${normalRows}</tbody></table>`;
+      filterBairrosList.querySelectorAll("button[data-action='save']").forEach((button) => button.addEventListener("click", async () => {
+        const row = button.closest("tr");
+        const nome = row.querySelector("input[data-role='nome']").value.trim();
+        if (!nome) return;
+        button.disabled = true;
+        try {
+          const data = await updateFilterItem("bairros", row.dataset.index, nome);
+          appendLog(`[FILTROS] Bairro ${data.slug} (${data.cidade}) atualizado no JSON e Firestore.`, "success");
+        } catch (err) {
+          appendLog(`[FILTROS] ${err.message}`, "error");
+        } finally {
+          button.disabled = false;
+        }
+      }));
+      filterBairrosList.querySelectorAll("button[data-action='save-principal']").forEach((button) => button.addEventListener("click", async () => {
+        const row = button.closest("tr");
+        const principal = row.querySelector("select[data-role='principal']").value === "sim";
+        const nome = row.querySelector("input[data-role='nome']").value.trim();
+        if (!nome) return;
+        button.disabled = true;
+        try {
+          const data = await updateBairroPrincipal(row.dataset.index, principal, nome);
+          appendLog(`[FILTROS] Bairro ${data.slug} (${data.cidade}) marcado como principal: ${data.principal ? "sim" : "não"}.`, "success");
+          await loadFilters();
+        } catch (err) {
+          appendLog(`[FILTROS] ${err.message}`, "error");
+        } finally {
+          button.disabled = false;
+        }
+      }));
+    }
+
+    function renderFilterTipos(items, duplicates = [], missingPrincipals = []) {
+      const duplicateSlugs = new Set(duplicates.map((item) => item.slug));
+      filterTiposCount.textContent = items.length + duplicateSlugs.size;
+      filterTiposSummary.textContent = `${new Set(missingPrincipals.map((item) => item.slug)).size} slug${missingPrincipals.length === 1 ? " sem principal" : "s sem principal"}; ${duplicateSlugs.size} slug${duplicateSlugs.size === 1 ? " repetido" : "s repetidos"}; ${items.length} tipos principais sem repetição.`;
+      const rows = (list, action) => list.map((item) => `
+        <tr data-slug="${escapeHtml(item.slug)}" data-alias-index="${item.aliasIndex}">
+          <td>${escapeHtml(item.slug)}</td>
+          <td>${escapeHtml(item.tipo)}</td>
+          <td><input data-role="nome" value="${escapeHtml(item.nome)}" /></td>
+          <td><select data-role="principal"><option value="sim" ${item.principal ? "selected" : ""}>Sim</option><option value="nao" ${item.principal ? "" : "selected"}>Não</option></select></td>
+          <td><button data-action="${action}" class="primary">Salvar</button></td>
+        </tr>`).join("");
+      const duplicateRows = rows(duplicates, "save-principal");
+      const missingPrincipalRows = rows(missingPrincipals, "save-principal");
+      const normalRows = rows(items, "save-principal");
+      filterTiposList.innerHTML = `${missingPrincipals.length ? `<div class="filter-section-title">Sem tipo principal: selecione uma opção como Sim</div><table class="filters-table"><thead><tr><th>Slug</th><th>Categoria</th><th>Nome</th><th>Principal</th><th></th></tr></thead><tbody>${missingPrincipalRows}</tbody></table>` : ""}${duplicates.length ? `<div class="filter-section-title">Tipos repetidos: defina apenas um como principal</div><table class="filters-table"><thead><tr><th>Slug</th><th>Categoria</th><th>Nome</th><th>Principal</th><th></th></tr></thead><tbody>${duplicateRows}</tbody></table>` : ""}<div class="filter-section-title">Demais tipos principais</div><table class="filters-table"><thead><tr><th>Slug</th><th>Categoria</th><th>Nome</th><th>Principal</th><th></th></tr></thead><tbody>${normalRows}</tbody></table>`;
+      filterTiposList.querySelectorAll("button[data-action='save-principal']").forEach((button) => button.addEventListener("click", async () => {
+        const row = button.closest("tr");
+        const principal = row.querySelector("select[data-role='principal']").value === "sim";
+        const nome = row.querySelector("input[data-role='nome']").value.trim();
+        if (!nome) return;
+        button.disabled = true;
+        try {
+          const data = await updateTipoPrincipal(row.dataset.slug, row.dataset.aliasIndex, principal, nome);
+          appendLog(`[FILTROS] Tipo ${data.slug} marcado como principal: ${data.principal ? "sim" : "não"}.`, "success");
+          await loadFilters();
+        } catch (err) {
+          appendLog(`[FILTROS] ${err.message}`, "error");
+        } finally {
+          button.disabled = false;
+        }
+      }));
+    }
+
+    async function loadFilters() {
+      try {
+        const [citiesResponse, bairrosResponse, tiposResponse] = await Promise.all([fetch("/api/filters/cities"), fetch("/api/filters/bairros"), fetch("/api/filters/tipos")]);
+        const citiesData = await citiesResponse.json().catch(() => ({}));
+        const bairrosData = await bairrosResponse.json().catch(() => ({}));
+        const tiposData = await tiposResponse.json().catch(() => ({}));
+        if (!citiesResponse.ok) throw new Error(citiesData.error || "Falha ao carregar cidades.");
+        if (!bairrosResponse.ok) throw new Error(bairrosData.error || "Falha ao carregar bairros.");
+        if (!tiposResponse.ok) throw new Error(tiposData.error || "Falha ao carregar tipos.");
+        renderFilterCities(
+          Array.isArray(citiesData.items) ? citiesData.items : [],
+          Array.isArray(citiesData.duplicates) ? citiesData.duplicates : [],
+          Array.isArray(citiesData.missingPrincipals) ? citiesData.missingPrincipals : []
+        );
+        renderFilterBairros(
+          Array.isArray(bairrosData.items) ? bairrosData.items : [],
+          Array.isArray(bairrosData.duplicates) ? bairrosData.duplicates : [],
+          Array.isArray(bairrosData.missingPrincipals) ? bairrosData.missingPrincipals : []
+        );
+        renderFilterTipos(
+          Array.isArray(tiposData.items) ? tiposData.items : [],
+          Array.isArray(tiposData.duplicates) ? tiposData.duplicates : [],
+          Array.isArray(tiposData.missingPrincipals) ? tiposData.missingPrincipals : []
+        );
+      } catch (err) {
+        filterCitiesSummary.textContent = err.message;
+        filterBairrosSummary.textContent = err.message;
+        filterTiposSummary.textContent = err.message;
+      }
+    }
+
+    loadFilters();
+
+    // ==========================================================
+    // Duplicados: sugestões automáticas, vínculo manual e grupos confirmados
+    // ==========================================================
+    const dupSubtabButtons = document.querySelectorAll(".dup-subtab-btn");
+    const dupSubtabPanels = {
+      sugestoes: document.getElementById("dupSubtabSugestoes"),
+      manual: document.getElementById("dupSubtabManual"),
+      grupos: document.getElementById("dupSubtabGrupos"),
+    };
+    function activateDupSubtab(name) {
+      dupSubtabButtons.forEach((btn) => btn.classList.toggle("active", btn.dataset.dupSubtab === name));
+      Object.entries(dupSubtabPanels).forEach(([key, panel]) => panel.classList.toggle("active", key === name));
+    }
+    dupSubtabButtons.forEach((btn) => btn.addEventListener("click", () => activateDupSubtab(btn.dataset.dupSubtab)));
+
+    const CRITERIOS_LABELS = { cidade: "Cidade", bairro: "Bairro", tipo: "Tipo", localizacao: "Localização", metragem: "Metragem", quartos: "Quartos", vagas: "Vagas", banheiros: "Banheiros" };
+
+    function dupImovelCardHtml(item, extraButtonHtml = "") {
+      const foto = item.linkFoto
+        ? `<img src="${escapeHtml(item.linkFoto)}" alt="Foto" style="width: 100%; max-height: 160px; object-fit: cover; border-radius: 6px; margin-bottom: 6px;" onerror="this.style.display='none'">`
+        : `<div class="sub" style="margin-bottom: 6px;">Sem foto</div>`;
+      return `
+        <div class="issue-card" data-collection="${escapeHtml(item.collectionName)}" data-link="${escapeHtml(item.linkReal)}">
+          ${foto}
+          <div class="issue-meta">
+            <div><strong>Projeto:</strong> ${escapeHtml(item.collectionName)}</div>
+            <div><strong>Título:</strong> ${escapeHtml(item.titulo || "(sem título)")}</div>
+            <div><strong>Preço:</strong> ${escapeHtml(item.preco || "-")}</div>
+            <div><strong>Cidade/Bairro:</strong> ${escapeHtml(item.cidade)} / ${escapeHtml(item.bairro)}</div>
+            <div><strong>Localização:</strong> ${escapeHtml(item.localizacao || "-")}</div>
+            <div><strong>Área/Quartos/Banh./Vagas:</strong> ${item.areaValor ?? "-"} m² / ${item.dormitorioValor ?? "-"} / ${item.banheiroValor ?? "-"} / ${item.garagemValor ?? "-"}</div>
+            <div><strong>Link:</strong> ${item.linkCard ? `<a href="${escapeHtml(item.linkCard)}" target="_blank" rel="noopener noreferrer">abrir</a>` : "-"}</div>
+          </div>
+          ${extraButtonHtml}
+        </div>
+      `;
+    }
+
+    const dupSugestoesList = document.getElementById("dupSugestoesList");
+    const dupSugestoesSummary = document.getElementById("dupSugestoesSummary");
+    const dupSugestoesCountBadge = document.getElementById("dupSugestoesCountBadge");
+    const btnDupSugestoes = document.getElementById("btnDupSugestoes");
+
+    function dupMemberChipHtml(item, selecionadoPorPadrao = false) {
+      const foto = item.linkFoto
+        ? `<img src="${escapeHtml(item.linkFoto)}" alt="Foto" onerror="this.style.display='none'">`
+        : `<div class="sub">Sem foto</div>`;
+      return `
+        <div class="dup-member${selecionadoPorPadrao ? " selecionado" : ""}" data-collection="${escapeHtml(item.collectionName)}" data-link="${escapeHtml(item.linkReal)}">
+          ${foto}
+          <div><strong>${escapeHtml(item.collectionName)}</strong></div>
+          <div>${escapeHtml(item.titulo || "(sem título)")}</div>
+          <div>${escapeHtml(item.preco || "-")}</div>
+          <div>${escapeHtml(item.bairro)} · ${escapeHtml(item.tipoImovel || "-")}</div>
+          ${item.linkCard ? `<a href="${escapeHtml(item.linkCard)}" target="_blank" rel="noopener noreferrer">abrir</a>` : ""}
+        </div>
+      `;
+    }
+
+    function renderDupSugestoes(sugestoes) {
+      dupSugestoesCountBadge.textContent = sugestoes.length;
+      if (!sugestoes.length) {
+        dupSugestoesList.innerHTML = `<div class="issue-empty">Nenhuma sugestão de duplicidade encontrada.</div>`;
+        return;
+      }
+      dupSugestoesList.innerHTML = sugestoes.map((grupo, grupoIndex) => {
+        const criteriosBatidos = Object.keys(grupo.criteriosExemplo || {}).map((key) => CRITERIOS_LABELS[key] || key).join(", ");
+        // Nenhum imóvel vem pré-selecionado; clique na foto/card marca quais vincular.
+        const membrosHtml = grupo.membros.map((item) => dupMemberChipHtml(item, false)).join("");
+        return `
+          <div class="dup-suggestion" data-grupo-index="${grupoIndex}">
+            <div class="dup-suggestion-info">
+              <div><strong>${grupo.membros.length}</strong> imóveis</div>
+              <div>Critérios: ${escapeHtml(criteriosBatidos || "-")}</div>
+              <div class="sub">Clique para marcar quais imóveis são duplicados entre si.</div>
+            </div>
+            <div class="dup-members">${membrosHtml}</div>
+            <div class="dup-suggestion-actions">
+              <button class="primary" data-action="confirmar">Confirmar duplicidade</button>
+              <button class="secondary" data-action="ignorar">Ignorar duplicidade</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      dupSugestoesList.querySelectorAll(".dup-suggestion[data-grupo-index]").forEach((row) => {
+        const grupoIndex = Number(row.dataset.grupoIndex);
+        const grupo = sugestoes[grupoIndex];
+
+        row.querySelectorAll(".dup-member").forEach((chip) => {
+          chip.addEventListener("click", (event) => {
+            if (event.target.closest("a")) return;
+            chip.classList.toggle("selecionado");
+          });
+        });
+
+        row.querySelector("[data-action='confirmar']").addEventListener("click", async (event) => {
+          const selecionados = [...row.querySelectorAll(".dup-member.selecionado")]
+            .map((chip) => ({ collectionName: chip.dataset.collection, linkReal: chip.dataset.link }));
+
+          if (selecionados.length < 2) {
+            appendLog("[DUPLICADOS] Selecione ao menos 2 imóveis (clique nas fotos) para confirmar a duplicidade.", "warn");
+            return;
+          }
+
+          event.target.disabled = true;
+          try {
+            const res = await fetch("/api/duplicados/confirmar", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ membros: selecionados, origem: "sugerido" }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Falha ao confirmar duplicidade.");
+            appendLog(`[DUPLICADOS] Grupo confirmado com ${selecionados.length} imóvel(is) selecionado(s).`, "success");
+            row.remove();
+          } catch (err) {
+            appendLog(`[DUPLICADOS] ${err.message}`, "error");
+            event.target.disabled = false;
+          }
+        });
+
+        row.querySelector("[data-action='ignorar']").addEventListener("click", async (event) => {
+          const membros = grupo.membros.map((m) => ({ collectionName: m.collectionName, linkReal: m.linkReal }));
+          event.target.disabled = true;
+          try {
+            const res = await fetch("/api/duplicados/rejeitar", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ membros }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Falha ao ignorar duplicidade.");
+            appendLog(`[DUPLICADOS] Duplicidade ignorada; só volta a sugerir se um imóvel novo entrar nessa comparação.`, "info");
+            row.remove();
+          } catch (err) {
+            appendLog(`[DUPLICADOS] ${err.message}`, "error");
+            event.target.disabled = false;
+          }
+        });
+      });
+    }
+
+    btnDupSugestoes.addEventListener("click", async () => {
+      dupSugestoesSummary.textContent = "Buscando sugestões...";
+      dupSugestoesList.innerHTML = "";
+      try {
+        const res = await fetch("/api/duplicados/sugestoes");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao buscar sugestões.");
+        dupSugestoesSummary.textContent = `Sugestões encontradas: ${data.total}.`;
+        renderDupSugestoes(Array.isArray(data.sugestoes) ? data.sugestoes : []);
+      } catch (err) {
+        dupSugestoesSummary.textContent = err.message;
+        appendLog(`[DUPLICADOS] ${err.message}`, "error");
+      }
+    });
+
+    // -- Vincular manualmente --
+    const dupBuscaInput = document.getElementById("dupBuscaInput");
+    const dupBuscaResultados = document.getElementById("dupBuscaResultados");
+    const dupSelecionadosEl = document.getElementById("dupSelecionados");
+    const btnDupVincularManual = document.getElementById("btnDupVincularManual");
+    let dupSelecionados = [];
+    let dupBuscaTimer = null;
+
+    function dupItemKey(item) {
+      return `${item.collectionName}::${item.linkReal}`;
+    }
+
+    function renderDupSelecionados() {
+      if (!dupSelecionados.length) {
+        dupSelecionadosEl.textContent = "Nenhum imóvel selecionado.";
+        return;
+      }
+      dupSelecionadosEl.innerHTML = `<strong>Selecionados (${dupSelecionados.length}):</strong> ` +
+        dupSelecionados.map((item) => `${escapeHtml(item.collectionName)}: ${escapeHtml(item.titulo || item.linkReal)}`).join(" · ");
+    }
+
+    function renderDupBuscaResultados(resultados) {
+      if (!resultados.length) {
+        dupBuscaResultados.innerHTML = `<div class="issue-empty">Nenhum imóvel encontrado.</div>`;
+        return;
+      }
+      dupBuscaResultados.innerHTML = `<div class="issue-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">` +
+        resultados.map((item) => {
+          const jaSelecionado = dupSelecionados.some((sel) => dupItemKey(sel) === dupItemKey(item));
+          return `
+            <div class="issue-card" data-collection="${escapeHtml(item.collectionName)}" data-link="${escapeHtml(item.linkReal)}">
+              ${item.linkFoto ? `<img src="${escapeHtml(item.linkFoto)}" alt="Foto" style="width: 100%; max-height: 140px; object-fit: cover; border-radius: 6px; margin-bottom: 6px;" onerror="this.style.display='none'">` : ""}
+              <div class="issue-meta">
+                <div><strong>Projeto:</strong> ${escapeHtml(item.collectionName)}</div>
+                <div><strong>Título:</strong> ${escapeHtml(item.titulo || "(sem título)")}</div>
+                <div><strong>Cidade/Bairro:</strong> ${escapeHtml(item.cidade)} / ${escapeHtml(item.bairro)}</div>
+              </div>
+              <button class="${jaSelecionado ? "secondary" : "primary"}" data-action="selecionar">${jaSelecionado ? "Remover seleção" : "Selecionar"}</button>
+            </div>
+          `;
+        }).join("") + `</div>`;
+
+      dupBuscaResultados.querySelectorAll(".issue-card").forEach((card) => {
+        const item = resultados.find((r) => r.collectionName === card.dataset.collection && r.linkReal === card.dataset.link);
+        card.querySelector("button").addEventListener("click", () => {
+          const key = dupItemKey(item);
+          const index = dupSelecionados.findIndex((sel) => dupItemKey(sel) === key);
+          if (index >= 0) dupSelecionados.splice(index, 1);
+          else dupSelecionados.push(item);
+          renderDupSelecionados();
+          renderDupBuscaResultados(resultados);
+        });
+      });
+    }
+
+    dupBuscaInput.addEventListener("input", () => {
+      clearTimeout(dupBuscaTimer);
+      const termo = dupBuscaInput.value.trim();
+      if (termo.length < 2) {
+        dupBuscaResultados.innerHTML = "";
+        return;
+      }
+      dupBuscaTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/duplicados/buscar?q=${encodeURIComponent(termo)}`);
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || "Falha ao buscar imóveis.");
+          renderDupBuscaResultados(Array.isArray(data.resultados) ? data.resultados : []);
+        } catch (err) {
+          dupBuscaResultados.innerHTML = `<div class="issue-empty">${escapeHtml(err.message)}</div>`;
+        }
+      }, 300);
+    });
+
+    btnDupVincularManual.addEventListener("click", async () => {
+      if (dupSelecionados.length < 2) {
+        appendLog("[DUPLICADOS] Selecione ao menos 2 imóveis para vincular.", "warn");
+        return;
+      }
+      try {
+        const membros = dupSelecionados.map((item) => ({ collectionName: item.collectionName, linkReal: item.linkReal }));
+        const res = await fetch("/api/duplicados/confirmar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ membros, origem: "manual" }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao vincular imóveis.");
+        appendLog(`[DUPLICADOS] ${dupSelecionados.length} imóvel(is) vinculado(s) manualmente.`, "success");
+        dupSelecionados = [];
+        renderDupSelecionados();
+        dupBuscaResultados.innerHTML = "";
+        dupBuscaInput.value = "";
+      } catch (err) {
+        appendLog(`[DUPLICADOS] ${err.message}`, "error");
+      }
+    });
+
+    // -- Grupos confirmados --
+    const dupGruposList = document.getElementById("dupGruposList");
+    const dupGruposCountBadge = document.getElementById("dupGruposCountBadge");
+    const btnDupGrupos = document.getElementById("btnDupGrupos");
+
+    async function loadDupGrupos() {
+      dupGruposList.textContent = "Carregando grupos confirmados...";
+      try {
+        const res = await fetch("/api/duplicados/grupos");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Falha ao carregar grupos confirmados.");
+        dupGruposCountBadge.textContent = data.total;
+        if (!data.grupos.length) {
+          dupGruposList.innerHTML = `<div class="issue-empty">Nenhum grupo confirmado ainda.</div>`;
+          return;
+        }
+        dupGruposList.innerHTML = data.grupos.map((grupo) => {
+          const cardsHtml = grupo.membros.map((item) => dupImovelCardHtml(
+            item,
+            `<button class="warn" data-action="desvincular" data-grupo="${escapeHtml(grupo.grupoId)}" data-collection="${escapeHtml(item.collectionName)}" data-link="${escapeHtml(item.linkReal)}" style="margin-top: 6px; width: 100%;">Remover deste grupo</button>`
+          )).join("");
+          return `
+            <section class="card" style="margin-top: 12px;">
+              <div class="head"><div class="title">Grupo ${escapeHtml(grupo.grupoId.slice(0, 8))} — origem: ${escapeHtml(grupo.origem)} (${grupo.membros.length} imóveis)</div></div>
+              <div class="body"><div class="issue-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">${cardsHtml}</div></div>
+            </section>
+          `;
+        }).join("");
+
+        dupGruposList.querySelectorAll("[data-action='desvincular']").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            btn.disabled = true;
+            try {
+              const res = await fetch("/api/duplicados/desvincular", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ grupoId: btn.dataset.grupo, membro: { collectionName: btn.dataset.collection, linkReal: btn.dataset.link } }),
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) throw new Error(data.error || "Falha ao remover vínculo.");
+              appendLog("[DUPLICADOS] Imóvel removido do grupo.", "info");
+              await loadDupGrupos();
+            } catch (err) {
+              appendLog(`[DUPLICADOS] ${err.message}`, "error");
+              btn.disabled = false;
+            }
+          });
+        });
+      } catch (err) {
+        dupGruposList.textContent = err.message;
+      }
+    }
+
+    btnDupGrupos.addEventListener("click", loadDupGrupos);
+  </script>
+</body>
+</html>

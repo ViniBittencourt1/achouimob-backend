@@ -1,0 +1,13 @@
+PASSO 1 - extractor.js achar o link proncipal e definir a rota de visualizações (nomenclarura dos links)
+PASSO 2 - sheets.js - renomear a aba do sheets
+PASSO 3 - entender o fluxo da página e começar as extrações a partir do 01
+
+Atualizacao da listagem Kenlo:
+- Vendas e locacao executam em headless, sem janela, independentemente do .env.
+- Cards: a.card-with-buttons.borderHover, com campos card-with-buttons__*.
+- Paginacao: links oficiais ?pagina=N, pelo coletor compartilhado vendasKenloPaginacao.js.
+- Exige total igual a precontagem antes de salvar JSON ou Sheets.
+- HTTP invalido, cards incompletos, total alterado ou paginacao parcial abortam a coleta.
+- O navegador e fechado no finally; a sincronizacao so ocorre apos coleta bem-sucedida.
+- Valores monetarios e areas preservam casas decimais; tipos, cidades e bairros usam catalogos.
+- atualizadoEm usa dd/MM/yyyy HH:mm:ss no fuso America/Sao_Paulo, em vendas e locacao.

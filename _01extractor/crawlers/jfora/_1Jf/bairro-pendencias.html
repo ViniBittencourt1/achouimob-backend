@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Correção de Bairros Sem Slug</title>
+  <style>
+    :root {
+      --bg: #141414;
+      --panel: #1d1d1d;
+      --panel-2: #252525;
+      --border: #343434;
+      --text: #ececec;
+      --muted: #a0a0a0;
+      --accent: #6ec6ff;
+      --warn: #ffd166;
+      --ok: #80ed99;
+      --err: #ff7b7b;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: radial-gradient(circle at top left, #202020, var(--bg));
+      color: var(--text);
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    .page {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, #212121, var(--panel));
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+    }
+
+    .head {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      background: #1a1a1a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .title {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: #2d2d2d;
+      color: var(--text);
+      border: 1px solid #474747;
+      border-radius: 7px;
+      padding: 8px 10px;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #393939; }
+    button.primary { background: #203544; border-color: #2a7ca5; }
+    button.primary:hover { background: #28485b; }
+    button.secondary { background: #2b2b2b; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .filters {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: #1b1b1b;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .pager {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .fgroup {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .fgroup label {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    input, select {
+      width: 100%;
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 12px;
+      box-sizing: border-box;
+    }
+
+    .issue-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #1a1a1a;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .issue-card.resolved {
+      border-color: #2f7a4a;
+      background: #18251d;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #3f8f5b;
+      background: #21432c;
+      color: #b9f2c9;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      width: fit-content;
+    }
+
+    .issue-meta, .issue-fix {
+      min-width: 0;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .issue-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      color: #d3d3d3;
+    }
+
+    .issue-meta a {
+      color: #8ad0ff;
+      word-break: break-all;
+      text-decoration: none;
+    }
+
+    .issue-meta a:hover { text-decoration: underline; }
+
+    .issue-fix {
+      border-left: 1px dashed #3a3a3a;
+      padding-left: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .issue-fix-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .hint {
+      color: var(--warn);
+      font-size: 11px;
+    }
+
+    .empty {
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .log {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: #101010;
+      white-space: pre-wrap;
+      font-size: 12px;
+      color: #9be99f;
+      min-height: 40px;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: min(420px, calc(100vw - 28px));
+      pointer-events: none;
+    }
+
+    .toast {
+      border-radius: 8px;
+      border: 1px solid #3f8f5b;
+      background: #1f3d29;
+      color: #cef6db;
+      padding: 10px 12px;
+      font-size: 12px;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+    }
+
+    .toast.error {
+      border-color: #9a4141;
+      background: #412020;
+      color: #ffd1d1;
+    }
+
+    @media (max-width: 1100px) {
+      .filters { grid-template-columns: 1fr; }
+      .issue-card { grid-template-columns: 1fr; }
+      .issue-fix { border-left: none; border-top: 1px dashed #3a3a3a; padding-left: 0; padding-top: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="card">
+      <div class="head">
+        <div>
+          <div class="title">Correção Manual de Bairros Sem Slug</div>
+          <div id="summary" class="sub">Carregando pendências...</div>
+        </div>
+        <div class="actions">
+          <button id="btnRunCheck" class="secondary">Rodar checagem agora</button>
+          <button id="btnReload" class="primary">Recarregar pendências</button>
+        </div>
+      </div>
+      <div class="body">
+        <div class="filters">
+          <div class="fgroup">
+            <label for="filterImob">Imobiliária</label>
+            <select id="filterImob"><option value="">Todas</option></select>
+          </div>
+          <div class="fgroup">
+            <label for="filterCidade">Cidade atual</label>
+            <select id="filterCidade"><option value="">Todas</option></select>
+          </div>
+          <div class="fgroup">
+            <label for="filterBairro">Bairro atual</label>
+            <select id="filterBairro"><option value="">Todos</option></select>
+          </div>
+          <div class="fgroup">
+            <label for="filterBusca">Busca livre</label>
+            <input id="filterBusca" placeholder="docId, título, link, localização..." />
+          </div>
+          <button id="btnClearFilters" class="secondary">Limpar filtros</button>
+        </div>
+        <div class="pager">
+          <button id="btnPrevPage" class="secondary">Anterior</button>
+          <span id="pagerInfo">Página 1</span>
+          <button id="btnNextPage" class="secondary">Próxima</button>
+        </div>
+        <div id="issues"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="head">
+        <div>
+          <div class="title">Bairros Sem Slug no Catálogo (_jfBairros.json)</div>
+          <div id="catalogSummary" class="sub">Carregando...</div>
+        </div>
+        <div class="actions">
+          <button id="btnCatalogReload" class="primary">Recarregar</button>
+        </div>
+      </div>
+      <div class="body">
+        <div id="catalogIssues"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="head"><div class="title">Log da Página</div></div>
+      <div class="body">
+        <div id="pageLog" class="log">Aguardando ações...</div>
+      </div>
+    </section>
+  </div>
+
+  <div id="toastWrap" class="toast-wrap"></div>
+
+  <script>
+    const summaryEl = document.getElementById("summary");
+    const issuesEl = document.getElementById("issues");
+    const pageLog = document.getElementById("pageLog");
+    const filterImob = document.getElementById("filterImob");
+    const filterCidade = document.getElementById("filterCidade");
+    const filterBairro = document.getElementById("filterBairro");
+    const filterBusca = document.getElementById("filterBusca");
+    const btnClearFilters = document.getElementById("btnClearFilters");
+    const btnReload = document.getElementById("btnReload");
+    const btnRunCheck = document.getElementById("btnRunCheck");
+    const btnPrevPage = document.getElementById("btnPrevPage");
+    const btnNextPage = document.getElementById("btnNextPage");
+    const pagerInfo = document.getElementById("pagerInfo");
+    const toastWrap = document.getElementById("toastWrap");
+
+    let bairroOptionsByCidade = {};
+    let allIssues = [];
+    let filteredIssuesCache = [];
+    let currentPage = 1;
+    const pageSize = 50;
+
+    function log(msg) {
+      const now = new Date().toISOString();
+      pageLog.textContent = `[${now}] ${msg}\n` + pageLog.textContent;
+    }
+
+    function toast(message, kind = "ok") {
+      const el = document.createElement("div");
+      el.className = `toast ${kind === "error" ? "error" : ""}`;
+      el.textContent = message;
+      toastWrap.appendChild(el);
+      setTimeout(() => el.remove(), 3500);
+    }
+
+    function escapeHtml(text) {
+      return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function getBairroOptionsMarkup(cidadeAtual) {
+      const options = (Array.isArray(bairroOptionsByCidade[cidadeAtual]) ? bairroOptionsByCidade[cidadeAtual] : [])
+        .filter((opt) => String(opt?.principal || "sim").trim().toLowerCase() === "sim");
+      if (!options.length) {
+        return `<option value="">Nenhum bairro cadastrado para esta cidade</option>`;
+      }
+      return options
+        .map((opt) => `<option value="${escapeHtml(opt.slug)}">${escapeHtml(opt.nome)} (${escapeHtml(opt.slug)})</option>`)
+        .join("");
+    }
+
+    function getUniqueValues(items, key) {
+      const set = new Set();
+      for (const item of items) {
+        const val = String(item[key] || "").trim();
+        set.add(val || "(vazio)");
+      }
+      return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    }
+
+    function fillFilterOptions() {
+      const imobs = getUniqueValues(allIssues, "imobiliariaId");
+      const cidades = getUniqueValues(allIssues, "cidadeAtual");
+      const bairros = getUniqueValues(allIssues, "bairroAtual");
+
+      filterImob.innerHTML = `<option value="">Todas</option>` + imobs.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+      filterCidade.innerHTML = `<option value="">Todas</option>` + cidades.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+      filterBairro.innerHTML = `<option value="">Todos</option>` + bairros.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+    }
+
+    function upsertBairroOption(cidadeAtual, bairroSlug, bairroNome) {
+      if (!cidadeAtual || !bairroSlug) return;
+
+      const current = Array.isArray(bairroOptionsByCidade[cidadeAtual]) ? [...bairroOptionsByCidade[cidadeAtual]] : [];
+      const exists = current.some((item) => String(item.slug || "") === bairroSlug);
+      if (!exists) {
+        current.push({ slug: bairroSlug, nome: bairroNome || bairroSlug });
+        current.sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+        bairroOptionsByCidade[cidadeAtual] = current;
+      }
+    }
+
+    async function resolveIssue(docId, mode, payload) {
+      const res = await fetch(`/api/bairro-slug-issues/${encodeURIComponent(docId)}/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, ...payload })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Falha ao corrigir bairro.");
+      }
+
+      return data;
+    }
+
+    function renderIssues(filtered) {
+      filteredIssuesCache = filtered;
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const start = (currentPage - 1) * pageSize;
+      const pageItems = filtered.slice(start, start + pageSize);
+
+      summaryEl.textContent = `Pendências exibidas: ${filtered.length} de ${allIssues.length}`;
+      pagerInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+      btnPrevPage.disabled = currentPage <= 1;
+      btnNextPage.disabled = currentPage >= totalPages;
+
+      if (!pageItems.length) {
+        issuesEl.innerHTML = `<div class="empty">Nenhuma pendência para os filtros atuais.</div>`;
+        return;
+      }
+
+      issuesEl.innerHTML = pageItems.map((issue) => {
+        const safeDocId = escapeHtml(issue.docId);
+        const safeBairroAtual = escapeHtml(issue.bairroAtual || "(vazio)");
+        const safeCidadeAtual = escapeHtml(issue.cidadeAtual || "(sem cidade)");
+        const safeTitulo = escapeHtml(issue.titulo || "(sem título)");
+        const safeImob = escapeHtml(issue.imobiliariaId || "(sem imobiliáriaId)");
+        const safeLocal = escapeHtml(issue.localizacao || "(sem localização)");
+        const safeLink = escapeHtml(issue.linkReal || "");
+        const isResolved = !!issue._resolved;
+        const resolvedText = escapeHtml(issue._resolvedBairro || "");
+        const hasCityOptions = Array.isArray(bairroOptionsByCidade[issue.cidadeAtual]) && bairroOptionsByCidade[issue.cidadeAtual].length > 0;
+
+        return `
+          <div class="issue-card ${isResolved ? "resolved" : ""}" data-doc-id="${safeDocId}">
+            <div class="issue-meta">
+              <div><strong>Doc:</strong> ${safeDocId}</div>
+              <div><strong>Imobiliária:</strong> ${safeImob}</div>
+              <div><strong>Cidade atual:</strong> ${safeCidadeAtual}</div>
+              <div><strong>Bairro atual:</strong> ${safeBairroAtual}</div>
+              ${isResolved ? `<div class="status-badge">Concluído: ${resolvedText || "bairro corrigido"}</div>` : ""}
+              <div><strong>Título:</strong> ${safeTitulo}</div>
+              <div><strong>Localização:</strong> ${safeLocal}</div>
+              <div><strong>LinkReal:</strong> ${safeLink ? `<a href="${safeLink}" target="_blank" rel="noopener noreferrer">${safeLink}</a>` : "(sem link)"}</div>
+            </div>
+            <div class="issue-fix">
+              <div><strong>Opção 1: atribuir bairro já existente da cidade atual</strong></div>
+              <div class="issue-fix-row">
+                <select data-role="assignSlug">
+                  <option value="">Selecione um bairro...</option>
+                  ${getBairroOptionsMarkup(issue.cidadeAtual)}
+                </select>
+                <button data-action="assign" class="primary" ${isResolved || !hasCityOptions ? "disabled" : ""}>Aplicar</button>
+              </div>
+
+              <div><strong>Opção 2: criar novo bairro na cidade atual e aplicar</strong></div>
+              <div class="issue-fix-row">
+                <input data-role="newNome" placeholder="Nome do bairro (ex: São Mateus)" />
+                <span></span>
+              </div>
+              <div class="issue-fix-row">
+                <input data-role="newSlug" placeholder="Slug (opcional, ex: sao-mateus)" />
+                <button data-action="create" class="primary" ${isResolved ? "disabled" : ""}>Criar e aplicar</button>
+              </div>
+              ${hasCityOptions ? "" : `<div class="hint">Não há bairros cadastrados para esta cidade no catálogo. Você pode criar um novo bairro manualmente.</div>`}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      issuesEl.querySelectorAll(".issue-card").forEach((card) => {
+        const docId = card.getAttribute("data-doc-id");
+        const assignBtn = card.querySelector("button[data-action='assign']");
+        const createBtn = card.querySelector("button[data-action='create']");
+
+        if (assignBtn) {
+          assignBtn.addEventListener("click", async () => {
+            try {
+              const targetSlug = card.querySelector("select[data-role='assignSlug']").value.trim();
+              if (!targetSlug) {
+                log(`Selecione um bairro para o registro ${docId}.`);
+                toast(`Selecione um bairro para o registro ${docId}.`, "error");
+                return;
+              }
+              const result = await resolveIssue(docId, "assign", { targetSlug });
+              log(`Registro ${docId} corrigido para o bairro ${result.bairro}.`);
+              toast(`Concluído: registro ${docId} atualizado para o bairro ${result.bairro}.`);
+              allIssues = allIssues.map((item) => item.docId === docId ? { ...item, _resolved: true, _resolvedBairro: result.bairro } : item);
+              applyFilters({ preservePage: true });
+            } catch (err) {
+              log(`Erro ao corrigir ${docId}: ${err.message}`);
+              toast(`Erro ao corrigir ${docId}: ${err.message}`, "error");
+            }
+          });
+        }
+
+        if (createBtn) {
+          createBtn.addEventListener("click", async () => {
+            try {
+              const targetNome = card.querySelector("input[data-role='newNome']").value.trim();
+              const targetSlug = card.querySelector("input[data-role='newSlug']").value.trim();
+              if (!targetNome && !targetSlug) {
+                log(`Informe nome ou slug para criar o bairro no registro ${docId}.`);
+                toast(`Informe nome ou slug para criar o bairro no registro ${docId}.`, "error");
+                return;
+              }
+              const result = await resolveIssue(docId, "create", { targetNome, targetSlug });
+              log(`Registro ${docId} corrigido com novo bairro ${result.bairro}.`);
+              toast(`Concluído: registro ${docId} atualizado com o bairro ${result.bairro}.`);
+              const currentIssue = allIssues.find((item) => item.docId === docId);
+              upsertBairroOption(currentIssue?.cidadeAtual || "", result.bairro, result.bairroNome || result.bairro);
+              allIssues = allIssues.map((item) => item.docId === docId ? { ...item, _resolved: true, _resolvedBairro: result.bairro } : item);
+              fillFilterOptions();
+              applyFilters({ preservePage: true });
+            } catch (err) {
+              log(`Erro ao corrigir ${docId}: ${err.message}`);
+              toast(`Erro ao corrigir ${docId}: ${err.message}`, "error");
+            }
+          });
+        }
+      });
+    }
+
+    function applyFilters(options = {}) {
+      const preservePage = Boolean(options.preservePage);
+      if (!preservePage) {
+        currentPage = 1;
+      }
+
+      const selectedImob = String(filterImob.value || "");
+      const selectedCidade = String(filterCidade.value || "");
+      const selectedBairro = String(filterBairro.value || "");
+      const q = String(filterBusca.value || "").trim().toLowerCase();
+
+      const filtered = allIssues.filter((issue) => {
+        const imobValue = String(issue.imobiliariaId || "").trim() || "(vazio)";
+        const cidadeValue = String(issue.cidadeAtual || "").trim() || "(vazio)";
+        const bairroValue = String(issue.bairroAtual || "").trim() || "(vazio)";
+
+        if (selectedImob && imobValue !== selectedImob) return false;
+        if (selectedCidade && cidadeValue !== selectedCidade) return false;
+        if (selectedBairro && bairroValue !== selectedBairro) return false;
+        if (!q) return true;
+
+        const haystack = [issue.docId, issue.imobiliariaId, issue.cidadeAtual, issue.bairroAtual, issue.titulo, issue.localizacao, issue.linkReal]
+          .map((x) => String(x || "").toLowerCase())
+          .join(" ");
+        return haystack.includes(q);
+      });
+
+      renderIssues(filtered);
+    }
+
+    async function loadIssues(options = {}) {
+      summaryEl.textContent = "Carregando pendências...";
+      issuesEl.innerHTML = `<div class="empty">Buscando registros para correção manual...</div>`;
+
+      const preservePage = Boolean(options.preservePage);
+      const res = await fetch("/api/bairro-slug-issues");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Falha ao buscar pendências de bairro.");
+      }
+
+      bairroOptionsByCidade = data.bairroOptions || {};
+      allIssues = Array.isArray(data.issues) ? data.issues : [];
+      fillFilterOptions();
+      applyFilters({ preservePage });
+    }
+
+    filterImob.addEventListener("change", applyFilters);
+    filterCidade.addEventListener("change", applyFilters);
+    filterBairro.addEventListener("change", applyFilters);
+    filterBusca.addEventListener("input", applyFilters);
+    btnClearFilters.addEventListener("click", () => {
+      filterImob.value = "";
+      filterCidade.value = "";
+      filterBairro.value = "";
+      filterBusca.value = "";
+      applyFilters();
+    });
+    btnReload.addEventListener("click", async () => {
+      try {
+        await loadIssues({ preservePage: true });
+        log("Pendências recarregadas.");
+      } catch (err) {
+        log(err.message);
+      }
+    });
+    btnRunCheck.addEventListener("click", async () => {
+      const res = await fetch("/api/check-missing-bairro-slugs", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        log(data.error || "Falha ao iniciar checagem.");
+        return;
+      }
+      log("Checagem disparada. Recarregue após a conclusão no scheduler.");
+    });
+
+    btnPrevPage.addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderIssues(filteredIssuesCache);
+      }
+    });
+
+    btnNextPage.addEventListener("click", () => {
+      const totalPages = Math.max(1, Math.ceil(filteredIssuesCache.length / pageSize));
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderIssues(filteredIssuesCache);
+      }
+    });
+
+    loadIssues().then(() => log("Pendências carregadas.")).catch((err) => {
+      summaryEl.textContent = "Falha ao carregar pendências.";
+      issuesEl.innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
+      log(err.message);
+    });
+
+    // ==========================================================
+    // Bairros sem slug no catálogo (_jfBairros.json)
+    // ==========================================================
+    const catalogSummaryEl = document.getElementById("catalogSummary");
+    const catalogIssuesEl = document.getElementById("catalogIssues");
+    const btnCatalogReload = document.getElementById("btnCatalogReload");
+
+    let catalogCityOptions = [];
+    let catalogBairroOptionsByCidade = {};
+    let catalogIssues = [];
+
+    function getCityOptionsMarkup(selectedCidade) {
+      return catalogCityOptions
+        .map((opt) => `<option value="${escapeHtml(opt.slug)}" ${opt.slug === selectedCidade ? "selected" : ""}>${escapeHtml(opt.nome)} (${escapeHtml(opt.slug)})</option>`)
+        .join("");
+    }
+
+    function renderCatalogIssues() {
+      catalogSummaryEl.textContent = `Bairros sem slug no catálogo: ${catalogIssues.length}`;
+
+      if (!catalogIssues.length) {
+        catalogIssuesEl.innerHTML = `<div class="empty">Nenhum bairro sem slug encontrado no catálogo.</div>`;
+        return;
+      }
+
+      catalogIssuesEl.innerHTML = catalogIssues.map((issue) => {
+        const safeNome = escapeHtml(issue.nome || "(sem nome)");
+        const safeCidade = escapeHtml(issue.cidade || "");
+        const isResolved = !!issue._resolved;
+        const resolvedText = escapeHtml(issue._resolvedSlug || "");
+
+        return `
+          <div class="issue-card ${isResolved ? "resolved" : ""}" data-index="${issue.index}">
+            <div class="issue-meta">
+              <div><strong>Nome atual:</strong> ${safeNome}</div>
+              <div><strong>Cidade cadastrada:</strong> ${safeCidade || "(vazia)"}</div>
+              ${isResolved ? `<div class="status-badge">Concluído: ${resolvedText || "slug definido"}</div>` : ""}
+            </div>
+            <div class="issue-fix">
+              <div class="fgroup">
+                <label>Cidade</label>
+                <select data-role="cidade">
+                  <option value="">Selecione a cidade...</option>
+                  ${getCityOptionsMarkup(issue.cidade)}
+                </select>
+              </div>
+
+              <div><strong>Opção 1: atribuir bairro já existente na cidade</strong></div>
+              <div class="issue-fix-row">
+                <select data-role="assignSlug">
+                  <option value="">Selecione um bairro...</option>
+                </select>
+                <button data-action="assign" class="primary" ${isResolved ? "disabled" : ""}>Aplicar</button>
+              </div>
+
+              <div><strong>Opção 2: criar novo slug e aplicar</strong></div>
+              <div class="issue-fix-row">
+                <input data-role="newNome" placeholder="Nome do bairro" value="${safeNome !== "(sem nome)" ? safeNome : ""}" />
+                <span></span>
+              </div>
+              <div class="issue-fix-row">
+                <input data-role="newSlug" placeholder="Slug (opcional)" />
+                <button data-action="create" class="primary" ${isResolved ? "disabled" : ""}>Criar e aplicar</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      catalogIssuesEl.querySelectorAll(".issue-card").forEach((card) => {
+        const index = card.getAttribute("data-index");
+        const cidadeSelect = card.querySelector("select[data-role='cidade']");
+        const assignSelect = card.querySelector("select[data-role='assignSlug']");
+        const assignBtn = card.querySelector("button[data-action='assign']");
+        const createBtn = card.querySelector("button[data-action='create']");
+
+        function refreshAssignOptions() {
+          const cidade = cidadeSelect.value.trim();
+          const options = Array.isArray(catalogBairroOptionsByCidade[cidade]) ? catalogBairroOptionsByCidade[cidade] : [];
+          assignSelect.innerHTML = `<option value="">Selecione um bairro...</option>` +
+            options.map((opt) => `<option value="${escapeHtml(opt.slug)}">${escapeHtml(opt.nome)} (${escapeHtml(opt.slug)})</option>`).join("");
+        }
+
+        cidadeSelect.addEventListener("change", refreshAssignOptions);
+        refreshAssignOptions();
+
+        if (assignBtn) {
+          assignBtn.addEventListener("click", async () => {
+            try {
+              const cidade = cidadeSelect.value.trim();
+              const targetSlug = assignSelect.value.trim();
+              if (!cidade) {
+                toast("Selecione a cidade do bairro.", "error");
+                return;
+              }
+              if (!targetSlug) {
+                toast("Selecione um bairro para atribuir.", "error");
+                return;
+              }
+              const result = await resolveCatalogIssue(index, "assign", { cidade, targetSlug });
+              log(`Bairro do catálogo (índice ${index}) corrigido para ${result.slug} (${result.cidade}). ${result.imoveisAtualizados || 0} imóvel(is) sincronizado(s) (Firestore, JSON e Sheets).`);
+              toast(`Concluído: bairro atualizado para ${result.slug} (${result.imoveisAtualizados || 0} imóvel(is) sincronizado(s)).`);
+              catalogIssues = catalogIssues.map((item) => String(item.index) === String(index) ? { ...item, _resolved: true, _resolvedSlug: result.slug } : item);
+              renderCatalogIssues();
+            } catch (err) {
+              log(`Erro ao corrigir bairro do catálogo (índice ${index}): ${err.message}`);
+              toast(`Erro: ${err.message}`, "error");
+            }
+          });
+        }
+
+        if (createBtn) {
+          createBtn.addEventListener("click", async () => {
+            try {
+              const cidade = cidadeSelect.value.trim();
+              const targetNome = card.querySelector("input[data-role='newNome']").value.trim();
+              const targetSlug = card.querySelector("input[data-role='newSlug']").value.trim();
+              if (!cidade) {
+                toast("Selecione a cidade do bairro.", "error");
+                return;
+              }
+              if (!targetNome && !targetSlug) {
+                toast("Informe nome ou slug para criar o bairro.", "error");
+                return;
+              }
+              const result = await resolveCatalogIssue(index, "create", { cidade, targetNome, targetSlug });
+              log(`Bairro do catálogo (índice ${index}) criado com slug ${result.slug} (${result.cidade}). ${result.imoveisAtualizados || 0} imóvel(is) sincronizado(s) (Firestore, JSON e Sheets).`);
+              toast(`Concluído: novo bairro ${result.slug} criado (${result.imoveisAtualizados || 0} imóvel(is) sincronizado(s)).`);
+              const current = Array.isArray(catalogBairroOptionsByCidade[result.cidade]) ? [...catalogBairroOptionsByCidade[result.cidade]] : [];
+              if (!current.some((item) => item.slug === result.slug)) {
+                current.push({ slug: result.slug, nome: result.nome });
+                current.sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+                catalogBairroOptionsByCidade[result.cidade] = current;
+              }
+              catalogIssues = catalogIssues.map((item) => String(item.index) === String(index) ? { ...item, _resolved: true, _resolvedSlug: result.slug } : item);
+              renderCatalogIssues();
+            } catch (err) {
+              log(`Erro ao criar bairro do catálogo (índice ${index}): ${err.message}`);
+              toast(`Erro: ${err.message}`, "error");
+            }
+          });
+        }
+      });
+    }
+
+    async function resolveCatalogIssue(index, mode, payload) {
+      const res = await fetch(`/api/bairro-catalog-issues/${encodeURIComponent(index)}/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, ...payload })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Falha ao corrigir bairro do catálogo.");
+      }
+
+      return data;
+    }
+
+    async function loadCatalogIssues() {
+      catalogSummaryEl.textContent = "Carregando...";
+      catalogIssuesEl.innerHTML = `<div class="empty">Buscando bairros sem slug no catálogo...</div>`;
+
+      const res = await fetch("/api/bairro-catalog-issues");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Falha ao buscar bairros sem slug no catálogo.");
+      }
+
+      catalogCityOptions = Array.isArray(data.cityOptions) ? data.cityOptions : [];
+      catalogBairroOptionsByCidade = data.bairroOptions || {};
+      catalogIssues = Array.isArray(data.issues) ? data.issues : [];
+      renderCatalogIssues();
+    }
+
+    btnCatalogReload.addEventListener("click", async () => {
+      try {
+        await loadCatalogIssues();
+        log("Bairros sem slug no catálogo recarregados.");
+      } catch (err) {
+        log(err.message);
+      }
+    });
+
+    loadCatalogIssues().then(() => log("Bairros sem slug no catálogo carregados.")).catch((err) => {
+      catalogSummaryEl.textContent = "Falha ao carregar.";
+      catalogIssuesEl.innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
+      log(err.message);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Correção de Cidades Sem Slug</title>
+  <style>
+    :root {
+      --bg: #141414;
+      --panel: #1d1d1d;
+      --panel-2: #252525;
+      --border: #343434;
+      --text: #ececec;
+      --muted: #a0a0a0;
+      --accent: #6ec6ff;
+      --warn: #ffd166;
+      --ok: #80ed99;
+      --err: #ff7b7b;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: radial-gradient(circle at top left, #202020, var(--bg));
+      color: var(--text);
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    .page {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, #212121, var(--panel));
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+    }
+
+    .head {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      background: #1a1a1a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .title {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: #2d2d2d;
+      color: var(--text);
+      border: 1px solid #474747;
+      border-radius: 7px;
+      padding: 8px 10px;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #393939; }
+    button.primary { background: #203544; border-color: #2a7ca5; }
+    button.primary:hover { background: #28485b; }
+    button.secondary { background: #2b2b2b; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .filters {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: #1b1b1b;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .pager {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .fgroup {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .fgroup label {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    input, select {
+      width: 100%;
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-family: inherit;
+      font-size: 12px;
+      box-sizing: border-box;
+    }
+
+    .summary {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .issue-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #1a1a1a;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .issue-card.resolved {
+      border-color: #2f7a4a;
+      background: #18251d;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #3f8f5b;
+      background: #21432c;
+      color: #b9f2c9;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      width: fit-content;
+    }
+
+    .issue-meta, .issue-fix {
+      min-width: 0;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .issue-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      color: #d3d3d3;
+    }
+
+    .issue-meta a {
+      color: #8ad0ff;
+      word-break: break-all;
+      text-decoration: none;
+    }
+
+    .issue-meta a:hover { text-decoration: underline; }
+
+    .issue-fix {
+      border-left: 1px dashed #3a3a3a;
+      padding-left: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .issue-fix-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .empty {
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .log {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: #101010;
+      white-space: pre-wrap;
+      font-size: 12px;
+      color: #9be99f;
+      min-height: 40px;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: min(420px, calc(100vw - 28px));
+      pointer-events: none;
+    }
+
+    .toast {
+      border-radius: 8px;
+      border: 1px solid #3f8f5b;
+      background: #1f3d29;
+      color: #cef6db;
+      padding: 10px 12px;
+      font-size: 12px;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+    }
+
+    .toast.error {
+      border-color: #9a4141;
+      background: #412020;
+      color: #ffd1d1;
+    }
+
+    @media (max-width: 1100px) {
+      .filters { grid-template-columns: 1fr; }
+      .issue-card { grid-template-columns: 1fr; }
+      .issue-fix { border-left: none; border-top: 1px dashed #3a3a3a; padding-left: 0; padding-top: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="card">
+      <div class="head">
+        <div>
+          <div class="title">Correção Manual de Cidades Sem Slug</div>
+          <div id="summary" class="sub">Carregando pendências...</div>
+        </div>
+        <div class="actions">
+          <button id="btnRunCheck" class="secondary">Rodar checagem agora</button>
+          <button id="btnReload" class="primary">Recarregar pendências</button>
+        </div>
+      </div>
+      <div class="body">
+        <div class="filters">
+          <div class="fgroup">
+            <label for="filterImob">Imobiliária</label>
+            <select id="filterImob"><option value="">Todas</option></select>
+          </div>
+          <div class="fgroup">
+            <label for="filterCidade">Cidade atual</label>
+            <select id="filterCidade"><option value="">Todas</option></select>
+          </div>
+          <div class="fgroup">
+            <label for="filterBusca">Busca livre</label>
+            <input id="filterBusca" placeholder="docId, título, link, localização..." />
+          </div>
+          <button id="btnClearFilters" class="secondary">Limpar filtros</button>
+        </div>
+        <div class="pager">
+          <button id="btnPrevPage" class="secondary">Anterior</button>
+          <span id="pagerInfo">Página 1</span>
+          <button id="btnNextPage" class="secondary">Próxima</button>
+        </div>
+        <div id="issues"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="head"><div class="title">Log da Página</div></div>
+      <div class="body">
+        <div id="pageLog" class="log">Aguardando ações...</div>
+      </div>
+    </section>
+  </div>
+
+  <div id="toastWrap" class="toast-wrap"></div>
+
+  <script>
+    const summaryEl = document.getElementById("summary");
+    const issuesEl = document.getElementById("issues");
+    const pageLog = document.getElementById("pageLog");
+    const filterImob = document.getElementById("filterImob");
+    const filterCidade = document.getElementById("filterCidade");
+    const filterBusca = document.getElementById("filterBusca");
+    const btnClearFilters = document.getElementById("btnClearFilters");
+    const btnReload = document.getElementById("btnReload");
+    const btnRunCheck = document.getElementById("btnRunCheck");
+    const btnPrevPage = document.getElementById("btnPrevPage");
+    const btnNextPage = document.getElementById("btnNextPage");
+    const pagerInfo = document.getElementById("pagerInfo");
+    const toastWrap = document.getElementById("toastWrap");
+    let cityOptions = [];
+    let allIssues = [];
+    let filteredIssuesCache = [];
+    let currentPage = 1;
+    const pageSize = 50;
+
+    function log(msg) {
+      const now = new Date().toISOString();
+      pageLog.textContent = `[${now}] ${msg}\n` + pageLog.textContent;
+    }
+
+    function toast(message, kind = "ok") {
+      const el = document.createElement("div");
+      el.className = `toast ${kind === "error" ? "error" : ""}`;
+      el.textContent = message;
+      toastWrap.appendChild(el);
+
+      setTimeout(() => {
+        el.remove();
+      }, 3500);
+    }
+
+    function escapeHtml(text) {
+      return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function getCityOptionsMarkup() {
+      return cityOptions
+        .map((opt) => `<option value="${escapeHtml(opt.slug)}">${escapeHtml(opt.nome)} (${escapeHtml(opt.slug)})</option>`)
+        .join("");
+    }
+
+    function getUniqueValues(items, key) {
+      const set = new Set();
+      for (const item of items) {
+        const val = String(item[key] || "").trim();
+        set.add(val || "(vazio)");
+      }
+      return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    }
+
+    function fillFilterOptions() {
+      const imobs = getUniqueValues(allIssues, "imobiliariaId");
+      const cidades = getUniqueValues(allIssues, "cidadeAtual");
+
+      filterImob.innerHTML = `<option value="">Todas</option>` + imobs.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+      filterCidade.innerHTML = `<option value="">Todas</option>` + cidades.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+    }
+
+    async function resolveIssue(docId, mode, payload) {
+      const res = await fetch(`/api/city-slug-issues/${encodeURIComponent(docId)}/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, ...payload })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Falha ao corrigir cidade.");
+      }
+
+      return data;
+    }
+
+    function renderIssues(filtered) {
+      filteredIssuesCache = filtered;
+
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const start = (currentPage - 1) * pageSize;
+      const pageItems = filtered.slice(start, start + pageSize);
+
+      summaryEl.textContent = `Pendências exibidas: ${filtered.length} de ${allIssues.length}`;
+      pagerInfo.textContent = `Página ${currentPage} de ${totalPages}`;
+      btnPrevPage.disabled = currentPage <= 1;
+      btnNextPage.disabled = currentPage >= totalPages;
+
+      if (!pageItems.length) {
+        issuesEl.innerHTML = `<div class="empty">Nenhuma pendência para os filtros atuais.</div>`;
+        return;
+      }
+
+      issuesEl.innerHTML = pageItems.map((issue) => {
+        const safeDocId = escapeHtml(issue.docId);
+        const safeCidadeAtual = escapeHtml(issue.cidadeAtual || "(vazio)");
+        const safeTitulo = escapeHtml(issue.titulo || "(sem título)");
+        const safeImob = escapeHtml(issue.imobiliariaId || "(sem imobiliáriaId)");
+        const safeLocal = escapeHtml(issue.localizacao || "(sem localização)");
+        const safeLink = escapeHtml(issue.linkReal || "");
+        const isResolved = !!issue._resolved;
+        const resolvedText = escapeHtml(issue._resolvedCidade || "");
+
+        return `
+          <div class="issue-card ${isResolved ? "resolved" : ""}" data-doc-id="${safeDocId}">
+            <div class="issue-meta">
+              <div><strong>Doc:</strong> ${safeDocId}</div>
+              <div><strong>Imobiliária:</strong> ${safeImob}</div>
+              <div><strong>Cidade atual:</strong> ${safeCidadeAtual}</div>
+              ${isResolved ? `<div class="status-badge">Concluído: ${resolvedText || "cidade corrigida"}</div>` : ""}
+              <div><strong>Título:</strong> ${safeTitulo}</div>
+              <div><strong>Localização:</strong> ${safeLocal}</div>
+              <div><strong>LinkReal:</strong> ${safeLink ? `<a href="${safeLink}" target="_blank" rel="noopener noreferrer">${safeLink}</a>` : "(sem link)"}</div>
+            </div>
+            <div class="issue-fix">
+              <div><strong>Opção 1: atribuir cidade já existente</strong></div>
+              <div class="issue-fix-row">
+                <select data-role="assignSlug">
+                  <option value="">Selecione uma cidade...</option>
+                  ${getCityOptionsMarkup()}
+                </select>
+                <button data-action="assign" class="primary" ${isResolved ? "disabled" : ""}>Aplicar</button>
+              </div>
+
+              <div><strong>Opção 2: criar nova cidade e aplicar</strong></div>
+              <div class="issue-fix-row">
+                <input data-role="newNome" placeholder="Nome da cidade (ex: Juiz de Fora MG)" />
+                <span></span>
+              </div>
+              <div class="issue-fix-row">
+                <input data-role="newSlug" placeholder="Slug (opcional, ex: juiz-de-fora-mg)" />
+                <button data-action="create" class="primary" ${isResolved ? "disabled" : ""}>Criar e aplicar</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      issuesEl.querySelectorAll(".issue-card").forEach((card) => {
+        const docId = card.getAttribute("data-doc-id");
+        const assignBtn = card.querySelector("button[data-action='assign']");
+        const createBtn = card.querySelector("button[data-action='create']");
+
+        assignBtn.addEventListener("click", async () => {
+          try {
+            const targetSlug = card.querySelector("select[data-role='assignSlug']").value.trim();
+            if (!targetSlug) {
+              log(`Selecione uma cidade para o registro ${docId}.`);
+              toast(`Selecione uma cidade para o registro ${docId}.`, "error");
+              return;
+            }
+            const result = await resolveIssue(docId, "assign", { targetSlug });
+            log(`Registro ${docId} corrigido para ${result.cidade}.`);
+            toast(`Concluído: registro ${docId} atualizado para ${result.cidade}.`);
+            allIssues = allIssues.map((item) =>
+              item.docId === docId
+                ? { ...item, _resolved: true, _resolvedCidade: result.cidade }
+                : item
+            );
+            applyFilters({ preservePage: true });
+          } catch (err) {
+            log(`Erro ao corrigir ${docId}: ${err.message}`);
+            toast(`Erro ao corrigir ${docId}: ${err.message}`, "error");
+          }
+        });
+
+        createBtn.addEventListener("click", async () => {
+          try {
+            const targetNome = card.querySelector("input[data-role='newNome']").value.trim();
+            const targetSlug = card.querySelector("input[data-role='newSlug']").value.trim();
+            if (!targetNome && !targetSlug) {
+              log(`Informe nome ou slug para criar a cidade no registro ${docId}.`);
+              toast(`Informe nome ou slug para criar a cidade no registro ${docId}.`, "error");
+              return;
+            }
+            const result = await resolveIssue(docId, "create", { targetNome, targetSlug });
+            log(`Registro ${docId} corrigido com nova cidade ${result.cidade}.`);
+            toast(`Concluído: registro ${docId} atualizado com nova cidade ${result.cidade}.`);
+            allIssues = allIssues.map((item) =>
+              item.docId === docId
+                ? { ...item, _resolved: true, _resolvedCidade: result.cidade }
+                : item
+            );
+            applyFilters({ preservePage: true });
+          } catch (err) {
+            log(`Erro ao corrigir ${docId}: ${err.message}`);
+            toast(`Erro ao corrigir ${docId}: ${err.message}`, "error");
+          }
+        });
+      });
+    }
+
+    function applyFilters(options = {}) {
+      const preservePage = Boolean(options.preservePage);
+      if (!preservePage) {
+        currentPage = 1;
+      }
+      const selectedImob = String(filterImob.value || "");
+      const selectedCidade = String(filterCidade.value || "");
+      const q = String(filterBusca.value || "").trim().toLowerCase();
+
+      const filtered = allIssues.filter((issue) => {
+        const imobValue = String(issue.imobiliariaId || "").trim() || "(vazio)";
+        const cidadeValue = String(issue.cidadeAtual || "").trim() || "(vazio)";
+        if (selectedImob && imobValue !== selectedImob) return false;
+        if (selectedCidade && cidadeValue !== selectedCidade) return false;
+        if (!q) return true;
+
+        const haystack = [issue.docId, issue.imobiliariaId, issue.cidadeAtual, issue.titulo, issue.localizacao, issue.linkReal]
+          .map((x) => String(x || "").toLowerCase())
+          .join(" ");
+        return haystack.includes(q);
+      });
+
+      renderIssues(filtered);
+    }
+
+    async function loadIssues() {
+      summaryEl.textContent = "Carregando pendências...";
+      issuesEl.innerHTML = `<div class="empty">Buscando registros para correção manual...</div>`;
+
+      const res = await fetch("/api/city-slug-issues");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Falha ao buscar pendências de cidade.");
+      }
+
+      cityOptions = Array.isArray(data.cityOptions) ? data.cityOptions : [];
+      allIssues = Array.isArray(data.issues) ? data.issues : [];
+      fillFilterOptions();
+      applyFilters();
+    }
+
+    filterImob.addEventListener("change", applyFilters);
+    filterCidade.addEventListener("change", applyFilters);
+    filterBusca.addEventListener("input", applyFilters);
+    btnClearFilters.addEventListener("click", () => {
+      filterImob.value = "";
+      filterCidade.value = "";
+      filterBusca.value = "";
+      applyFilters();
+    });
+    btnReload.addEventListener("click", async () => {
+      try {
+        await loadIssues();
+        log("Pendências recarregadas.");
+      } catch (err) {
+        log(err.message);
+      }
+    });
+    btnRunCheck.addEventListener("click", async () => {
+      const res = await fetch("/api/check-missing-city-slugs", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        log(data.error || "Falha ao iniciar checagem.");
+        return;
+      }
+      log("Checagem disparada. Recarregue após a conclusão no scheduler.");
+    });
+
+    btnPrevPage.addEventListener("click", () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderIssues(filteredIssuesCache);
+      }
+    });
+
+    btnNextPage.addEventListener("click", () => {
+      const totalPages = Math.max(1, Math.ceil(filteredIssuesCache.length / pageSize));
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderIssues(filteredIssuesCache);
+      }
+    });
+
+    loadIssues().then(() => log("Pendências carregadas.")) .catch((err) => {
+      summaryEl.textContent = "Falha ao carregar pendências.";
+      issuesEl.innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
+      log(err.message);
+    });
+  </script>
+</body>
+</html>

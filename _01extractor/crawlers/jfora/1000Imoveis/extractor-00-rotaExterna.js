@@ -1,0 +1,154 @@
+import { backendRoot as ISOLATED_BACKEND_ROOT } from '../../../../backend-paths.cjs';
+export { linksBusca };
+
+import puppeteer from 'puppeteer';
+import { extractLinkReal } from './extractor-01-linkReal.js';
+import { extractTitulo } from './extractor-02-titulo.js';
+import { extractPreco } from './extractor-03-preco.js';
+import { extractLocalizacao } from './extractor-04-localizacao.js';
+import { extractTipoImovel } from './extractor-05-tipoImovel.js';
+import { extractBairro } from './extractor-06-bairrojs.js';
+import { extractCidade } from './extractor-07-cidade.js';
+import { extractDormitorioValor } from './extractor-08-dormitorioValor.js';
+import { extractBanheiroValor } from './extractor-09-banheiroValor.js';
+import { extractAmbienteValor } from './extractor-10-ambienteValor.js';
+import { extractAreaValor } from './extractor-11-areaValor.js';
+import { extractGaragemValor } from './extractor-12-garagemValor.js';
+import { extractElevadorValor } from './extractor-13-elevadorValor.js';
+import { extractCodigoBase } from './extractor-14-codigoBase.js';
+import { extractLinkCard } from './extractor-15-linkCard.js';
+import { extractCorretor } from './extractor-16-corretor.js';
+import { extractDataInclusao } from './extractor-17-dataInclusao.js';
+import { extractDataExclusao } from './extractor-18-dataExclusao.js';
+import { extractLinkFoto } from './extractor-19-linkFoto.js';
+import { extractAtualizadoEm } from './extractor-20-atualizadoEm.js';
+
+const limitesPreco = [0, 250000, 500000, 1000000];
+const linksBusca = limitesPreco.map((minimo, indice) => {
+  const url = new URL("https://1000imoveisjf.com.br/imoveis?order=recentes&negociacao=venda");
+  url.searchParams.set("preco_min", String(minimo));
+  url.searchParams.set("preco_max", limitesPreco[indice + 1] === undefined ? "" : String(limitesPreco[indice + 1]));
+  return url.href;
+});
+
+
+import fs from 'fs';
+import path from 'path';
+// Se já houver integração Firestore:
+// import { batchUpdateFromMap } from '../../../services/firebase.js';
+
+async function raspagemPorLinks() {
+  const browser = await puppeteer.launch({ headless: false });
+  const todosImoveis = [];
+  for (const link of linksBusca) {
+    let page;
+    try {
+      page = await browser.newPage();
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      await page.setViewport({ width: 1280, height: 800 });
+      await page.goto(link, { waitUntil: 'networkidle2', timeout: 90000 });
+      console.log(`Página acessada: ${link}`);
+      // Clicar LGPD se aparecer
+      try {
+        await page.waitForSelector('lgpd-close', { timeout: 5000 });
+        await page.evaluate(() => {
+          const btn = document.querySelector('lgpd-close');
+          if (btn && /prosseguir|ok/i.test(btn.textContent)) btn.click();
+        });
+        await page.waitForTimeout(500);
+      } catch (e) {}
+      // Paginação: clicar até o botão sumir, desabilitar ou não aumentar o número de cards
+      let paginacaoClicks = 0;
+      let lastCardsCount = 0;
+      while (true) {
+        if (paginacaoClicks >= 50) {
+          console.warn('Paginação interrompida: mais de 50 cliques realizados. Pulando para o próximo processo.');
+          break;
+        }
+        const btn = await page.$('button.more-results--button');
+        if (!btn) break;
+        // Verifica se o botão está desabilitado ou invisível
+        const isDisabled = await page.evaluate(el => el.disabled || el.classList.contains('disabled') || el.offsetParent === null, btn);
+        if (isDisabled) break;
+        // Conta o número de cards antes do clique
+        const cardsBefore = await page.$$('.imovel-item.imovel-item-show');
+        await btn.click();
+        paginacaoClicks++;
+        console.log(`[${paginacaoClicks}] Clique de paginação`);
+        await new Promise(resolve => setTimeout(resolve, 3500)); // tempo extra para garantir carregamento
+        // Conta o número de cards após o clique
+        const cardsAfter = await page.$$('.imovel-item.imovel-item-show');
+        if (cardsAfter.length === cardsBefore.length || cardsAfter.length === lastCardsCount) {
+          console.log('Paginação interrompida: número de cards não aumentou.');
+          break;
+        }
+        lastCardsCount = cardsAfter.length;
+      }
+      // Após a paginação, raspar todos os cards
+      const cardHtmls = await page.$$eval('.imovel-item.imovel-item-show', elements =>
+        elements.map(element => element.outerHTML)
+      );
+      console.log(`Cards encontrados após paginação: ${cardHtmls.length}`);
+      if (cardHtmls.length === 0) {
+        try {
+          await page.close();
+        } catch (e) {
+          console.warn('⚠️ Falha ao fechar página (provavelmente já fechada):', e.message);
+        }
+        continue;
+      }
+      for (const html of cardHtmls) {
+		const linkReal = extractLinkReal(html);
+		const cidade = extractCidade(html);
+        const imovel = {
+          linkReal,
+          titulo: extractTitulo(html),
+          preco: extractPreco(html),
+          localizacao: extractLocalizacao(html),
+          tipoImovel: extractTipoImovel(html),
+          bairro: extractBairro(html, linkReal, cidade),
+          cidade,
+          dormitorioValor: extractDormitorioValor(html),
+          banheiroValor: extractBanheiroValor(html),
+          ambienteValor: extractAmbienteValor(html),
+          areaValor: extractAreaValor(html),
+          garagemValor: extractGaragemValor(html),
+          elevadorValor: extractElevadorValor(html),
+          codigoBase: extractCodigoBase(html),
+          linkCard: extractLinkCard(html),
+          corretor: extractCorretor(html),
+          dataInclusao: extractDataInclusao(html),
+          dataExclusao: extractDataExclusao(html),
+          linkFoto: extractLinkFoto(html),
+          atualizadoEm: extractAtualizadoEm(html)
+        };
+        todosImoveis.push(imovel);
+      }
+    } catch (err) {
+      console.error(`❌ Erro ao processar o link: ${link}`);
+      console.error(err);
+    } finally {
+      if (page) {
+        try {
+          await page.close();
+        } catch (e) {
+          console.warn('⚠️ Falha ao fechar página (provavelmente já fechada):', e.message);
+        }
+      }
+    }
+  }
+  await browser.close();
+  // Exibir apenas o total de cards raspados
+  console.log(`Total de cards raspados: ${todosImoveis.length}`);
+  // Salvar no JSON ao final
+  const outputDir = path.join(ISOLATED_BACKEND_ROOT, 'crawler');
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+  const outputPath = path.join(outputDir, 'jf1000Imoveis.json');
+  fs.writeFileSync(outputPath, JSON.stringify(todosImoveis, null, 2), 'utf-8');
+  // Salvar no Firestore ao final (descomente se já houver integração)
+  // await batchUpdateFromMap('jf1000Imoveis', todosImoveis, 'linkReal');
+}
+
+// raspagemPorLinks().catch(console.error);

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel de Aluguéis | JF</title>
+  <link rel="icon" href="/raspagem.png">
+  <link rel="stylesheet" href="/painel.css">
+  <style>
+    .brand { display:flex; align-items:center; gap:10px; padding:12px 16px 0; font-size:18px; font-weight:bold; }
+    .brand img { width:28px; height:28px; object-fit:contain; }
+    .brand small { margin-left:auto; font-size:12px; color:var(--muted); font-weight:normal; }
+    .tab-bar { flex-wrap:wrap; }
+    .json-subtabs { display:none; padding:10px 12px 0; gap:6px; flex-wrap:wrap; }
+    .json-subtabs.active { display:flex; }
+    .rental-panel { display:none; flex:1; min-height:0; overflow:auto; }
+    .rental-panel.active { display:flex; flex-direction:column; }
+    .layout { flex:1; min-height:0; }
+    .projects-wrap { overflow:auto; }
+    .rental-project { display:flex; align-items:center; gap:8px; padding:9px 4px; border-bottom:1px solid var(--border); }
+    .rental-project[hidden] { display:none; }
+    .rental-project span:first-of-type { flex:1; overflow-wrap:anywhere; }
+    .rental-project small { color:var(--muted); font-size:11px; }
+    .rental-project.running small { color:var(--accent); }
+    .rental-project.success small { color:var(--ok); }
+    .rental-project.error small { color:var(--err); }
+    .row input[type=checkbox] { width:auto; }
+    .icon { width:16px; height:16px; flex-shrink:0; }
+    button { display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .records-page { padding:12px; gap:12px; }
+    .toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    #typesenseSourceControls[hidden] { display:none; }
+    .toolbar input, .toolbar select { background:var(--panel-2); color:var(--text); border:1px solid var(--border); padding:8px; font-family:inherit; border-radius:4px; min-width:0; }
+    .toolbar input { flex:1; min-width:160px; }
+    .table-wrap { flex:1; min-height:0; overflow:auto; border:1px solid var(--border); }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    th { text-align:left; background:var(--panel-2); position:sticky; top:0; z-index:1; }
+    td, th { padding:9px; border-bottom:1px solid var(--border); }
+    td { vertical-align:middle; }
+    td.title-cell { min-width:180px; max-width:320px; overflow-wrap:anywhere; }
+    td img { width:66px; height:48px; object-fit:cover; border-radius:4px; background:var(--panel-2); }
+    .pagination { display:flex; gap:10px; justify-content:flex-end; align-items:center; font-size:12px; }
+    .totals { display:flex; gap:24px; flex-wrap:wrap; padding:14px 0; border-bottom:1px solid var(--border); }
+    .totals strong { font-size:22px; color:var(--accent); }
+    .totals span { color:var(--muted); font-size:12px; margin-left:8px; }
+    .error-message { color:var(--err); min-height:18px; font-size:12px; }
+    #output { white-space:pre-wrap; overflow-wrap:anywhere; overflow:auto; flex:1; }
+    .log-line { padding:3px 0; border-bottom:1px solid #292929; }
+    .log-line.warn { color:var(--warn); } .log-line.error { color:var(--err); } .log-line.success { color:var(--ok); }
+    dialog { max-width:720px; width:calc(100% - 48px); max-height:80vh; background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:8px; }
+    dialog::backdrop { background:#000a; }
+    .details { display:grid; grid-template-columns:150px minmax(0,1fr); gap:10px; font-size:12px; }
+    .details dt { color:var(--muted); } .details dd { margin:0; overflow-wrap:anywhere; }
+    @media(max-width:700px) {
+      .layout { display:flex; flex-direction:column; overflow:auto; padding:10px; }
+      .layout .card { min-height:320px; flex:none; }
+      .layout .terminal { height:360px; }
+      .rental-project { padding:10px 4px; }
+      .brand { font-size:16px; } .brand small { font-size:10px; }
+      .toolbar select { max-width:100%; }
+      .details { grid-template-columns:100px minmax(0,1fr); }
+      .tab-btn { padding:9px 11px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="brand"><img src="/raspagem.png" alt=""><span>Aluguéis · Juiz de Fora</span><small id="connection">Conectando...</small></header>
+  <nav class="tab-bar" aria-label="Painel de aluguéis">
+    <button class="tab-btn active" data-tab="raspagem">Raspagem</button>
+    <button class="tab-btn" data-tab="json">Json</button>
+    <button class="tab-btn" data-tab="firestore">Firestore</button>
+    <button class="tab-btn" data-tab="typesense">Typesense</button>
+    <button class="tab-btn" data-tab="filtros">Filtros</button>
+    <button class="tab-btn" data-tab="duplicados">Duplicados</button>
+    <button class="tab-btn" data-tab="retirados">Retirados</button>
+  </nav>
+  <div id="jsonSubtabs" class="json-subtabs" aria-label="Validações dos JSONs">
+    <button class="subtab-btn active" data-json="cidades">Cidades</button>
+    <button class="subtab-btn" data-json="bairros">Bairros</button>
+    <button class="subtab-btn" data-json="titulo">Título</button>
+    <button class="subtab-btn" data-json="localizacao">Localização</button>
+    <button class="subtab-btn" data-json="tipoImovel">Tipo Imóvel</button>
+    <button class="subtab-btn" data-json="preco">Preço</button>
+    <button class="subtab-btn" data-json="linkFoto">linkFoto</button>
+    <button class="subtab-btn" data-json="linkReal">linkReal</button>
+    <button class="subtab-btn" data-json="resumo">Resumo</button>
+    <button class="subtab-btn" data-json="ativos">Ativos</button>
+  </div>
+  <div id="jsonTransferActions" class="json-subtabs">
+    <button id="btnPublishJson" class="warn"><i data-lucide="cloud-upload" class="icon"></i>Transmitir JSONs para o Firestore</button>
+    <span class="sub">Firestore: <strong>__alugueisPublicos</strong> · Backup: <strong>__alugueisPublicos__backup</strong></span>
+    <div id="jsonPublishMessage" class="error-message" role="status"></div>
+  </div>
+  <main id="raspagem" class="rental-panel active">
+    <div class="layout">
+      <section class="card controls">
+        <div class="head"><div class="title">Rotina de aluguéis</div></div>
+        <div class="body">
+          <div class="row"><label for="enabled">Agendamento diário</label><input type="checkbox" id="enabled"></div>
+          <div class="row"><label for="hour">Horário · São Paulo</label><input type="time" id="hour" value="21:00"></div>
+          <div class="btns">
+            <button id="selectAll" title="Selecionar todos"><i data-lucide="list-checks" class="icon"></i>Marcar todos</button>
+            <button id="unselectAll" title="Desmarcar todos"><i data-lucide="list-x" class="icon"></i>Desmarcar</button>
+            <button id="save" class="primary"><i data-lucide="save" class="icon"></i>Salvar agenda</button>
+            <button id="run" class="primary"><i data-lucide="play" class="icon"></i>Executar agora</button>
+            <button id="stop" class="warn" disabled><i data-lucide="square" class="icon"></i>Parar execução</button>
+            <button id="clear"><i data-lucide="trash-2" class="icon"></i>Limpar log</button>
+          </div>
+          <div id="status" class="status" aria-live="polite">Carregando...</div>
+          <div id="message" class="error-message" role="status"></div>
+          <label class="toolbar"><input id="projectSearch" placeholder="Filtrar imobiliárias" aria-label="Filtrar imobiliárias"></label>
+          <div class="projects-wrap" id="projects"></div>
+        </div>
+      </section>
+      <section class="card terminal">
+        <div class="head"><div class="title">Terminal de execução</div></div>
+        <div class="body"><div id="output" aria-label="Logs da execução"></div></div>
+      </section>
+    </div>
+  </main>
+  <section id="publicacao" class="rental-panel records-page">
+    <div class="toolbar"><strong id="publicationTitle">Firestore · Aluguéis</strong><button id="refreshPublication"><i data-lucide="refresh-cw" class="icon"></i>Atualizar plano</button></div>
+    <dl id="publicationPlan" class="details"></dl>
+    <div id="typesenseSourceControls" class="toolbar" hidden>
+      <label for="typesenseSource">Origem dos dados</label>
+      <select id="typesenseSource">
+        <option value="firestore">Firestore · __alugueisPublicos</option>
+        <option value="json">JSON local · envio direto ao Typesense</option>
+      </select>
+    </div>
+    <div id="typesenseSourceInfo" class="sub" hidden></div>
+    <div id="publicationStageLabel" class="status">JSON → Firestore</div>
+    <div class="toolbar"><button id="previewPublication"><i data-lucide="eye" class="icon"></i>Simular envio</button><button id="publishPublication" class="warn"><i data-lucide="cloud-upload" class="icon"></i>Confirmar envio</button></div>
+    <div id="publicationMessage" class="error-message" role="status"></div>
+  </section>
+  <section id="validacoes" class="rental-panel records-page">
+    <div class="toolbar"><strong id="validationTitle">Validação dos JSONs</strong><button id="refreshValidation"><i data-lucide="list-checks" class="icon"></i>Validar</button></div>
+    <div id="validationSummary" class="status" role="status"></div>
+    <div class="table-wrap"><table><thead><tr><th>Imobiliária</th><th>Código</th><th>Imóvel</th><th>Valor atual</th><th>Problema</th></tr></thead><tbody id="validationRows"></tbody></table></div>
+  </section>
+  <section id="bairrosJson" class="rental-panel records-page">
+    <div class="toolbar"><strong>Checkar Bairro (dados brutos dos crawlers - JSON) <span id="bairroJsonCountBadge" class="count-badge"></span></strong><button id="btnCheckBairroJson" class="primary">Checkar bairros no JSON</button></div>
+    <div id="bairroJsonSummary" class="sub" role="status"></div>
+    <div id="bairroJsonIssues"></div>
+  </section>
+  <section id="cidadesJson" class="rental-panel records-page">
+    <div class="toolbar"><strong>Checkar Cidades (dados brutos dos crawlers - JSON) <span id="cityJsonCountBadge" class="count-badge"></span></strong><button id="btnCheckCityJson" class="primary">Checkar cidades no JSON</button></div>
+    <div id="cityJsonSummary" class="sub" role="status"></div>
+    <div id="cityJsonIssues"></div>
+  </section>
+  <section id="tiposJson" class="rental-panel records-page">
+    <div class="toolbar"><strong>Checkar Tipo Imóvel (dados brutos dos crawlers - JSON) <span id="tipoImovelJsonCountBadge" class="count-badge"></span></strong><button id="btnCheckTipoImovelJson" class="primary">Checkar tipos de imóvel no JSON</button></div>
+    <div id="tipoImovelJsonSummary" class="sub" role="status"></div>
+    <div id="tipoImovelJsonIssues"></div>
+  </section>
+  <section id="fotosJson" class="rental-panel records-page">
+    <div class="toolbar"><strong>Checkar linkFoto (dados brutos dos crawlers - JSON) <span id="linkFotoJsonCountBadge" class="count-badge"></span></strong><button id="btnCheckLinkFotoJson" class="primary">Checkar linkFoto no JSON</button><button id="btnConfirmAllLinkFotoJson">Confirmar todos sem foto</button></div>
+    <div id="linkFotoJsonSummary" class="sub" role="status"></div>
+    <div id="linkFotoJsonIssues"></div>
+  </section>
+  <section id="filtros" class="rental-panel records-page">
+    <div class="toolbar"><strong>Filtros de aluguéis</strong><select id="filterType" aria-label="Tipo de filtro"><option value="cidade">Cidades</option><option value="bairro">Bairros</option><option value="tipoImovel">Tipos de imóvel</option><option value="dormitorioValor">Quartos</option><option value="banheiroValor">Banheiros</option><option value="garagemValor">Vagas</option></select><button id="refreshFilters"><i data-lucide="refresh-cw" class="icon"></i>Atualizar</button></div>
+    <div id="filterSummary" class="status"></div>
+    <div class="table-wrap"><table><thead><tr><th>Valor</th><th>Cidade</th><th>Quantidade</th></tr></thead><tbody id="filterRows"></tbody></table></div>
+  </section>
+  <section id="duplicados" class="rental-panel records-page">
+    <div class="toolbar"><strong>Duplicados nos aluguéis</strong><button id="refreshDuplicates"><i data-lucide="scan-search" class="icon"></i>Verificar</button></div>
+    <div id="duplicateSummary" class="status"></div>
+    <div class="table-wrap"><table><thead><tr><th>Identificação</th><th>Imobiliárias</th><th>Registros</th><th>Tipo</th></tr></thead><tbody id="duplicateRows"></tbody></table></div>
+  </section>
+  <section id="resumo" class="rental-panel records-page">
+    <div class="toolbar"><strong>Resumo por imobiliária</strong><button id="refreshSummary" title="Atualizar resumo"><i data-lucide="refresh-cw" class="icon"></i>Atualizar</button></div>
+    <div id="totals" class="totals"></div>
+    <div class="table-wrap"><table><thead><tr><th>Imobiliária</th><th>Ativos</th><th>Retirados</th><th>Estado</th></tr></thead><tbody id="summaryRows"></tbody></table></div>
+  </section>
+  <section id="records" class="rental-panel records-page">
+    <div class="toolbar"><strong id="recordsTitle">Ativos</strong><select id="collection" aria-label="Imobiliária"></select><input id="search" placeholder="Título, código, bairro ou cidade" aria-label="Buscar imóveis"><button id="refreshRecords" title="Atualizar imóveis"><i data-lucide="refresh-cw" class="icon"></i>Atualizar</button></div>
+    <div id="recordMessage" class="error-message" role="status"></div>
+    <div class="table-wrap"><table><thead><tr><th>Foto</th><th>Código</th><th>Imóvel</th><th>Aluguel</th><th>Bairro / cidade</th><th>Data</th><th>Ações</th></tr></thead><tbody id="recordRows"></tbody></table></div>
+    <div class="pagination"><button id="prev" aria-label="Página anterior" title="Página anterior"><i data-lucide="chevron-left" class="icon"></i></button><span id="pageLabel"></span><button id="next" aria-label="Próxima página" title="Próxima página"><i data-lucide="chevron-right" class="icon"></i></button></div>
+  </section>
+  <dialog id="details"><div class="toolbar"><strong>Dados do imóvel</strong><button id="closeDetails" aria-label="Fechar detalhes" title="Fechar"><i data-lucide="x" class="icon"></i></button></div><dl class="details" id="detailRows"></dl></dialog>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script>
+    const byId = id => document.getElementById(id);
+    const socket = io();
+    let projects = [];
+    let schedulerState = {};
+    let type = 'ativos';
+    let page = 1;
+    let requestVersion = 0;
+    let publicationStage = 'firestore';
+    let validationField = 'cidades';
+    let bairroJsonOptions = {};
+    let bairroJsonCityOptions = [];
+    let bairroJsonIssues = [];
+    let bairroJsonTotal = 0;
+    let bairroJsonOffset = 0;
+    let bairroJsonHasMore = false;
+    let bairroJsonTotalByMotivo = {};
+    let tipoImovelJsonOptions = [];
+    let tipoImovelJsonIssues = [];
+    let linkFotoJsonIssues = [];
+    let linkFotoJsonProjectStats = [];
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const labels = { pending:'Na fila', running:'Executando', success:'Concluído', error:'Falhou', stopped:'Parado' };
+    const money = value => value === null || value === undefined ? 'Sob consulta' : Number(value).toLocaleString('pt-BR', {style:'currency',currency:'BRL'});
+    function icons() { window.lucide?.createIcons(); }
+    async function api(url, body) {
+      const response = await fetch(url, body === undefined ? {} : { method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Falha na operação.');
+      return data;
+    }
+    function selected() { return Array.from(document.querySelectorAll('#projects input:checked')).map(input => input.value); }
+    function cell(row, text) { const node = document.createElement('td'); node.textContent = String(text ?? ''); row.append(node); return node; }
+    function updateState(state) {
+      schedulerState = state;
+      byId('run').disabled = state.running;
+      byId('stop').disabled = !state.running;
+      byId('previewPublication').disabled = state.running;
+      byId('publishPublication').disabled = state.running;
+      byId('btnPublishJson').disabled = state.running;
+      byId('typesenseSource').disabled = state.running;
+      byId('status').textContent = state.running ? `Executando ${state.currentProject} · ${state.currentIndex + 1}/${state.currentQueue.length}` : 'Aguardando execução';
+      for (const project of projects) {
+        const row = document.querySelector(`[data-project="${project.name}"]`);
+        if (!row) continue;
+        const status = state.statuses?.[project.name];
+        row.className = `rental-project ${status || ''}`;
+        row.querySelector('small').textContent = labels[status] || '';
+      }
+    }
+    function addLog(entry) {
+      const node = document.createElement('div');
+      node.className = `log-line ${entry.type}`;
+      node.textContent = `[${new Date(entry.at).toLocaleTimeString('pt-BR')}] ${entry.message}`;
+      byId('output').append(node);
+      while (byId('output').children.length > 800) byId('output').firstChild.remove();
+      byId('output').scrollTop = byId('output').scrollHeight;
+    }
+    async function loadSummary() {
+      try {
+        const data = await api('/api/summary');
+        byId('totals').replaceChildren();
+        for (const [value, label] of [[data.projects.length,'Imobiliárias'],[data.ativos,'Ativos'],[data.retirados,'Retirados'],[data.errors,'Falhas de leitura']]) {
+          const item = document.createElement('div'); const number = document.createElement('strong'); number.textContent = value.toLocaleString('pt-BR'); const name = document.createElement('span'); name.textContent = label; item.append(number,name); byId('totals').append(item);
+        }
+        byId('summaryRows').replaceChildren();
+        for (const project of data.projects) { const row = document.createElement('tr'); cell(row,project.collection); cell(row,project.ativos); cell(row,project.retirados); cell(row,project.error || labels[schedulerState.statuses?.[project.name]] || 'Disponível'); byId('summaryRows').append(row); }
+      } catch (error) { byId('totals').textContent = error.message; }
+    }
+    async function loadRecords() {
+      const version = ++requestVersion;
+      byId('recordMessage').textContent = 'Carregando...';
+      try {
+        const params = new URLSearchParams({ projeto:byId('collection').value,tipo:type,busca:byId('search').value,pagina:String(page) });
+        const data = await api(`/api/imoveis?${params}`);
+        if (version !== requestVersion) return;
+        if (page > data.paginas) { page = data.paginas; return loadRecords(); }
+        byId('recordRows').replaceChildren();
+        for (const item of data.records) {
+          const row = document.createElement('tr'); const photo = cell(row,'');
+          if (/^https?:\/\//i.test(item.linkFoto || '')) { const img = document.createElement('img'); img.src = item.linkFoto; img.alt = ''; img.loading = 'lazy'; img.onerror = () => { img.hidden = true; }; photo.append(img); }
+          cell(row,item.codigoBase); cell(row,item.titulo).className = 'title-cell'; cell(row,money(item.preco)); cell(row,[item.bairro,item.cidade].filter(Boolean).join(' / ')); cell(row,type === 'retirados' ? item.dataExclusao : item.atualizadoEm);
+          const actions = cell(row,''); const button = document.createElement('button'); button.textContent = 'Detalhes'; button.onclick = () => {
+            byId('detailRows').replaceChildren();
+            for (const [key,value] of Object.entries(item)) { const term = document.createElement('dt'); const description = document.createElement('dd'); term.textContent = key; description.textContent = value !== null && typeof value === 'object' ? JSON.stringify(value) : String(value ?? ''); byId('detailRows').append(term,description); }
+            byId('details').showModal();
+          }; actions.append(button);
+          if (/^https?:\/\//i.test(item.linkReal || '')) { const link = document.createElement('a'); link.href = item.linkReal; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = ' Abrir'; actions.append(link); }
+          byId('recordRows').append(row);
+        }
+        byId('recordMessage').textContent = data.total ? '' : 'Nenhum imóvel encontrado.';
+        byId('pageLabel').textContent = `${data.total} imóveis · ${page}/${data.paginas}`;
+        byId('prev').disabled = page <= 1; byId('next').disabled = page >= data.paginas;
+      } catch (error) { if (version === requestVersion) byId('recordMessage').textContent = error.message; }
+    }
+    async function action(callback) { byId('message').textContent = ''; try { await callback(); } catch(error) { byId('message').textContent = error.message; } }
+    function hidePanels() { document.querySelectorAll('.rental-panel').forEach(panel => panel.classList.remove('active')); }
+    function showJson(tab) {
+      hidePanels();
+      document.querySelectorAll('[data-json]').forEach(button => button.classList.toggle('active',button.dataset.json === tab));
+      if (tab === 'ativos') { type = 'ativos'; page = 1; byId('recordsTitle').textContent = 'Imóveis ativos'; byId('records').classList.add('active'); loadRecords(); }
+      else if (tab === 'resumo') { byId('resumo').classList.add('active'); loadSummary(); }
+      else if (tab === 'bairros') { byId('bairrosJson').classList.add('active'); loadBairroJsonIssues(); }
+      else if (tab === 'cidades') { byId('cidadesJson').classList.add('active'); loadCityJsonIssues(); }
+      else if (tab === 'tipoImovel') { byId('tiposJson').classList.add('active'); loadTipoImovelJsonIssues(); }
+      else if (tab === 'linkFoto') { byId('fotosJson').classList.add('active'); loadLinkFotoJsonIssues(); }
+      else { validationField = tab; byId('validacoes').classList.add('active'); byId('validationTitle').textContent = `Validar ${document.querySelector(`[data-json="${tab}"]`).textContent}`; loadValidation(); }
+    }
+    document.querySelectorAll('[data-json]').forEach(button => button.onclick = () => showJson(button.dataset.json));
+    document.querySelectorAll('[data-tab]').forEach(button => button.onclick = () => {
+      document.querySelectorAll('.tab-btn').forEach(tab => tab.classList.toggle('active',tab === button));
+      hidePanels();
+      const tab = button.dataset.tab;
+      byId('jsonSubtabs').classList.toggle('active',tab === 'json');
+      byId('jsonTransferActions').classList.toggle('active',tab === 'json');
+      if (tab === 'json') showJson(document.querySelector('[data-json].active')?.dataset.json || 'ativos');
+      else if (tab === 'retirados') { type = tab; page = 1; byId('recordsTitle').textContent = 'Imóveis retirados'; byId('records').classList.add('active'); loadRecords(); }
+      else if (tab === 'firestore' || tab === 'typesense') { publicationStage = tab; byId('publicacao').classList.add('active'); byId('publicationTitle').textContent = `${tab === 'firestore' ? 'Firestore' : 'Typesense'} · Aluguéis`; renderPublicationSource(); loadPublication(); }
+      else { byId(tab).classList.add('active'); if (tab === 'filtros') loadFilters(); if (tab === 'duplicados') loadDuplicates(); }
+    });
+    async function loadCityJsonIssues() {
+      byId('cityJsonSummary').textContent = 'Checando cidades no JSON...';
+      byId('cityJsonIssues').innerHTML = '<div class="issue-empty">Buscando registros...</div>';
+      try {
+        const data = await api('/api/city-json-issues');
+        byId('cityJsonSummary').textContent = `Registros com cidade pendente: ${data.total}.`;
+        byId('cityJsonCountBadge').textContent = `${data.total} pendentes`;
+        byId('cityJsonIssues').innerHTML = data.issues.length ? data.issues.map((issue, index) => {
+          const link = /^https?:\/\//i.test(issue.linkReal || '') ? `<a href="${escapeHtml(issue.linkReal)}" target="_blank" rel="noopener noreferrer">${escapeHtml(issue.linkReal)}</a>` : '(sem link)';
+          return `<div class="issue-card" data-key="${index}">
+            <div class="issue-meta">
+              <div><strong>Arquivo:</strong> ${escapeHtml(issue.file)}</div>
+              <div><strong>Motivo:</strong> ${issue.motivo === 'vazio' ? 'Cidade vazia' : 'Cidade fora do catálogo'}</div>
+              <div><strong>Cidade atual:</strong> ${escapeHtml(issue.cidade || '(vazio)')}</div>
+              <div><strong>Título:</strong> ${escapeHtml(issue.titulo)}</div>
+              <div><strong>LinkReal:</strong> ${link}</div>
+            </div>
+            <div class="issue-fix">
+              <div><strong>Opção 1: atribuir cidade já existente</strong></div>
+              <div class="issue-fix-row"><select data-role="assignSlug"><option value="">Selecione uma cidade...</option>${data.cityOptions.map(city => `<option value="${escapeHtml(city.slug)}">${escapeHtml(city.nome)} (${escapeHtml(city.slug)})</option>`).join('')}</select><button data-action="assign" class="primary">Aplicar</button></div>
+              <div><strong>Opção 2: criar nova cidade e aplicar</strong></div>
+              <div class="issue-fix-row"><input data-role="newNome" placeholder="Nome da cidade (ex: Juiz de Fora MG)"><span></span></div>
+              <div class="issue-fix-row"><input data-role="newSlug" placeholder="Slug (opcional, ex: juiz-de-fora-mg)"><button data-action="create" class="primary">Criar e aplicar</button></div>
+              <div data-role="error" class="error-message" role="status"></div>
+            </div>
+          </div>`;
+        }).join('') : '<div class="issue-empty">Nenhuma pendência de cidade encontrada.</div>';
+        byId('cityJsonIssues').querySelectorAll('.issue-card').forEach(card => {
+          card.querySelectorAll('button[data-action]').forEach(button => {
+            button.onclick = async () => {
+              const issue = data.issues[Number(card.dataset.key)];
+              const mode = button.dataset.action;
+              const targetSlug = card.querySelector(`[data-role="${mode === 'assign' ? 'assignSlug' : 'newSlug'}"]`).value.trim();
+              const targetNome = card.querySelector('[data-role="newNome"]').value.trim();
+              const error = card.querySelector('[data-role="error"]');
+              error.textContent = '';
+              if (mode === 'assign' && !targetSlug) { error.textContent = 'Selecione uma cidade para atribuir.'; return; }
+              if (mode === 'create' && !targetNome && !targetSlug) { error.textContent = 'Informe nome ou slug para criar a cidade.'; return; }
+              card.querySelectorAll('button').forEach(item => { item.disabled = true; });
+              try {
+                await api('/api/city-json-issues/resolve', { file: issue.file, linkReal: issue.linkReal, mode, targetSlug, targetNome });
+                await loadCityJsonIssues();
+              } catch (err) {
+                error.textContent = err.message;
+                card.querySelectorAll('button').forEach(item => { item.disabled = false; });
+              }
+            };
+          });
+        });
+      } catch (error) {
+        byId('cityJsonSummary').textContent = 'Falha ao checar cidades no JSON.';
+        byId('cityJsonIssues').innerHTML = `<div class="issue-empty">${escapeHtml(error.message)}</div>`;
+      }
+    }
+    byId('btnCheckCityJson').onclick = loadCityJsonIssues;
+    function getBairroJsonCityOptionsMarkup(cidade) {
+      return bairroJsonCityOptions.map(opt=>`<option value="${escapeHtml(opt.slug)}" ${opt.slug===cidade?'selected':''}>${escapeHtml(opt.nome)} (${escapeHtml(opt.slug)})</option>`).join('');
+    }
+    function getBairroJsonOptionsMarkup(cidade) {
+      return (bairroJsonOptions[cidade] || []).filter(opt=>String(opt.principal || 'sim').trim().toLowerCase()==='sim').map(opt=>`<option value="${escapeHtml(opt.slug)}">${escapeHtml(opt.nome)} (${escapeHtml(opt.slug)})</option>`).join('');
+    }
+    function bairroMotivoLabel(motivo) {
+      if (motivo==='vazio') return 'Bairro vazio';
+      if (motivo==='fora-do-catalogo') return 'Fora do catálogo _jfBairros.json';
+      return 'Texto em maiúsculas';
+    }
+    function renderBairroJsonIssues() {
+      const resolved=bairroJsonIssues.filter(issue=>issue._resolved).length;
+      const pendentes=Math.max(0,bairroJsonTotal-resolved);
+      const fora=Math.max(0,Number(bairroJsonTotalByMotivo['fora-do-catalogo'] || 0)-bairroJsonIssues.filter(issue=>issue._resolved && issue.motivo==='fora-do-catalogo').length);
+      byId('bairroJsonSummary').textContent=`Registros com bairro pendente: ${pendentes} de ${bairroJsonTotal}. Fora do catálogo: ${fora}.`;
+      byId('bairroJsonCountBadge').textContent=`${pendentes} pendente${pendentes===1?'':'s'}`;
+      if (!bairroJsonIssues.length) { byId('bairroJsonIssues').innerHTML='<div class="issue-empty">Nenhum registro pendente encontrado.</div>'; return; }
+      byId('bairroJsonIssues').innerHTML=bairroJsonIssues.map((issue,index)=>{
+        const resolved=!!issue._resolved;
+        const link=/^https?:\/\//i.test(issue.linkReal || '') ? `<a href="${escapeHtml(issue.linkReal)}" target="_blank" rel="noopener noreferrer">${escapeHtml(issue.linkReal)}</a>` : '(sem link)';
+        return `<div class="issue-card ${resolved?'resolved':''}" data-key="${index}">
+          <div class="issue-meta">
+            <div><strong>Arquivo:</strong> ${escapeHtml(issue.file)}</div>
+            <div><strong>Motivo:</strong> ${bairroMotivoLabel(issue.motivo)}</div>
+            <div><strong>Cidade:</strong> ${escapeHtml(issue._resolvedCidade || issue.cidade || '(sem cidade)')}</div>
+            <div><strong>Bairro atual:</strong> ${escapeHtml(issue.bairro || '(vazio)')}</div>
+            ${resolved?`<div class="status-badge">Concluído: ${escapeHtml(issue._resolvedBairro)} (${escapeHtml(issue._resolvedCidade)})</div>`:''}
+            <div><strong>Título:</strong> ${escapeHtml(issue.titulo || '(sem título)')}</div>
+            <div><strong>LinkReal:</strong> ${link}</div>
+          </div>
+          <div class="issue-fix">
+            <div><strong>Cidade do registro</strong></div>
+            <div class="issue-fix-row"><select data-role="targetCidade"><option value="">Selecione uma cidade...</option>${getBairroJsonCityOptionsMarkup(issue.cidade)}</select><span></span></div>
+            <div><strong>Opção 1: atribuir bairro já existente</strong></div>
+            <div class="issue-fix-row"><select data-role="assignSlug"><option value="">Selecione um bairro...</option>${getBairroJsonOptionsMarkup(issue.cidade)}</select><button data-action="assign" class="primary" ${resolved?'disabled':''}>Aplicar</button></div>
+            <div><strong>Opção 2: criar novo bairro e aplicar</strong></div>
+            <div class="issue-fix-row"><input data-role="newNome" placeholder="Nome do bairro (ex: Centro)"><span></span></div>
+            <div class="issue-fix-row"><input data-role="newSlug" placeholder="Slug (opcional, ex: centro)"><button data-action="create" class="primary" ${resolved?'disabled':''}>Criar e aplicar</button></div>
+            <div data-role="error" class="error-message" role="status"></div>
+          </div>
+        </div>`;
+      }).join('');
+      byId('bairroJsonIssues').querySelectorAll('.issue-card').forEach(card=>{
+        const index=Number(card.dataset.key);
+        const issue=bairroJsonIssues[index];
+        const city=card.querySelector('[data-role="targetCidade"]');
+        const bairro=card.querySelector('[data-role="assignSlug"]');
+        city.onchange=()=>bairro.innerHTML=`<option value="">Selecione um bairro...</option>${getBairroJsonOptionsMarkup(city.value)}`;
+        for (const mode of ['assign','create']) card.querySelector(`[data-action="${mode}"]`).onclick=async()=>{
+          const button=card.querySelector(`[data-action="${mode}"]`);
+          const error=card.querySelector('[data-role="error"]');
+          error.textContent='';
+          try {
+            const payload={file:issue.file,linkReal:issue.linkReal,mode,targetCidade:city.value,targetSlug:mode==='assign'?bairro.value:card.querySelector('[data-role="newSlug"]').value.trim(),targetNome:mode==='create'?card.querySelector('[data-role="newNome"]').value.trim():''};
+            if (!payload.targetCidade) throw new Error('Selecione a cidade correta.');
+            if (mode==='assign' && !payload.targetSlug) throw new Error('Selecione um bairro para atribuir.');
+            if (mode==='create' && !payload.targetNome && !payload.targetSlug) throw new Error('Informe nome ou slug para criar o bairro.');
+            button.disabled=true;
+            const result=await api('/api/bairro-json-issues/resolve',payload);
+            if (mode==='create') {
+              const options=bairroJsonOptions[result.cidade] || (bairroJsonOptions[result.cidade]=[]);
+              if (!options.some(opt=>opt.slug===result.bairro)) options.push({slug:result.bairro,nome:result.nome,cidade:result.cidade,principal:'sim'});
+              options.sort((left,right)=>left.nome.localeCompare(right.nome,'pt-BR'));
+            }
+            bairroJsonIssues[index]={...issue,_resolved:true,_resolvedBairro:result.bairro,_resolvedCidade:result.cidade};
+            renderBairroJsonIssues();
+          } catch(err) { button.disabled=false; error.textContent=err.message; }
+        };
+      });
+      const pagination=document.createElement('div'); pagination.className='issue-empty';
+      pagination.textContent=`Exibindo ${bairroJsonOffset+1}-${bairroJsonOffset+bairroJsonIssues.length} de ${bairroJsonTotal} pendências.`;
+      if (bairroJsonOffset>0) { const button=document.createElement('button'); button.textContent='Página anterior'; button.onclick=()=>loadBairroJsonIssues(Math.max(0,bairroJsonOffset-100)); pagination.append(button); }
+      if (bairroJsonHasMore) { const button=document.createElement('button'); button.textContent='Próxima página'; button.onclick=()=>loadBairroJsonIssues(bairroJsonOffset+100); pagination.append(button); }
+      byId('bairroJsonIssues').append(pagination);
+    }
+    async function loadBairroJsonIssues(offset=0) {
+      byId('bairroJsonSummary').textContent='Checando bairros no JSON...';
+      byId('bairroJsonIssues').innerHTML='<div class="issue-empty">Buscando registros...</div>';
+      try {
+        const data=await api(`/api/bairro-json-issues?offset=${offset}&limit=100`);
+        bairroJsonOptions=data.bairroOptions; bairroJsonCityOptions=data.cityOptions; bairroJsonIssues=data.issues;
+        bairroJsonTotal=data.total; bairroJsonOffset=data.offset; bairroJsonHasMore=data.hasMore; bairroJsonTotalByMotivo=data.totalByMotivo;
+        renderBairroJsonIssues();
+      } catch(error) { byId('bairroJsonSummary').textContent='Falha ao checar bairros no JSON.'; byId('bairroJsonIssues').innerHTML=`<div class="issue-empty">${escapeHtml(error.message)}</div>`; }
+    }
+    byId('btnCheckBairroJson').onclick=()=>loadBairroJsonIssues();
+    function renderTipoImovelJsonIssues() {
+      const issues=tipoImovelJsonIssues;
+      const vazios=issues.filter(issue=>issue.motivo==='vazio').length;
+      byId('tipoImovelJsonSummary').textContent=`Pendências: ${issues.length}. Vazios: ${vazios}. Fora do catálogo: ${issues.length-vazios}.`;
+      byId('tipoImovelJsonCountBadge').textContent=`${issues.length} pendente${issues.length===1?'':'s'}`;
+      if (!issues.length) { byId('tipoImovelJsonIssues').innerHTML='<div class="issue-empty">Nenhum tipo de imóvel fora do padrão encontrado.</div>'; return; }
+      const options=tipoImovelJsonOptions.map(item=>`<option value="${escapeHtml(item.slug)}">${escapeHtml(item.nome)} (${escapeHtml(item.slug)})</option>`).join('');
+      byId('tipoImovelJsonIssues').innerHTML=issues.map((issue,index)=>{
+        const link=/^https?:\/\//i.test(issue.linkReal || '')?`<a href="${escapeHtml(issue.linkReal)}" target="_blank" rel="noopener noreferrer">${escapeHtml(issue.linkReal)}</a>`:'(sem link)';
+        return `<div class="issue-card" data-key="${index}">
+          <div class="issue-meta">
+            <div><strong>Arquivo:</strong> ${escapeHtml(issue.file)}</div>
+            <div><strong>Tipo Imóvel:</strong> ${escapeHtml(issue.tipoImovel || '(vazio)')}</div>
+            <div><strong>Motivo:</strong> ${issue.motivo==='fora-do-catalogo'?'Fora do catálogo _brTipoImovel.json':'Vazio'}</div>
+            <div><strong>Título:</strong> ${escapeHtml(issue.titulo || '(vazio)')}</div>
+            <div><strong>Localização:</strong> ${escapeHtml(issue.localizacao || '(vazia)')}</div>
+            <div><strong>Cidade:</strong> ${escapeHtml(issue.cidade || '(vazia)')}</div>
+            <div><strong>Bairro:</strong> ${escapeHtml(issue.bairro || '(vazio)')}</div>
+            <div><strong>LinkReal:</strong> ${link}</div>
+          </div>
+          <div class="issue-fix">
+            <div><strong>Atribuir tipo de imóvel</strong></div>
+            <div class="issue-fix-row"><select data-role="tipoImovel"><option value="">Selecione um tipo...</option>${options}</select><button data-action="assign" class="primary">Aplicar</button></div>
+            <div data-role="error" class="error-message" role="status"></div>
+          </div>
+        </div>`;
+      }).join('');
+      byId('tipoImovelJsonIssues').querySelectorAll('.issue-card').forEach(card=>{
+        const index=Number(card.dataset.key);
+        const issue=issues[index];
+        const button=card.querySelector('[data-action="assign"]');
+        button.onclick=async()=>{
+          const error=card.querySelector('[data-role="error"]'); error.textContent='';
+          const tipoImovel=card.querySelector('[data-role="tipoImovel"]').value;
+          if (!tipoImovel) {error.textContent='Selecione um tipo de imóvel.';return;}
+          button.disabled=true;
+          try {
+            await api('/api/tipo-imovel-json-issues/resolve',{file:issue.file,linkReal:issue.linkReal,tipoImovel});
+            issues.splice(index,1); renderTipoImovelJsonIssues();
+          } catch(err) {button.disabled=false;error.textContent=err.message;}
+        };
+      });
+    }
+    async function loadTipoImovelJsonIssues() {
+      byId('tipoImovelJsonSummary').textContent='Checando tipos de imóvel no JSON...';
+      byId('tipoImovelJsonIssues').innerHTML='<div class="issue-empty">Buscando registros...</div>';
+      try {
+        const data=await api('/api/tipo-imovel-json-issues');
+        tipoImovelJsonOptions=data.typeOptions; tipoImovelJsonIssues=data.issues; renderTipoImovelJsonIssues();
+      } catch(error) {byId('tipoImovelJsonSummary').textContent='Falha ao checar tipos de imóvel no JSON.';byId('tipoImovelJsonIssues').innerHTML=`<div class="issue-empty">${escapeHtml(error.message)}</div>`;}
+    }
+    byId('btnCheckTipoImovelJson').onclick=loadTipoImovelJsonIssues;
+    function renderLinkFotoJsonIssues() {
+      const issues=linkFotoJsonIssues;
+      const emptyCount=issues.filter(issue=>issue.motivo==='vazio').length;
+      const invalidCount=issues.length-emptyCount;
+      byId('linkFotoJsonSummary').textContent=`Registros com linkFoto vazio: ${emptyCount}${invalidCount?`. Links inválidos: ${invalidCount}`:''}`;
+      byId('linkFotoJsonCountBadge').textContent=`${issues.length} pendente${issues.length===1?'':'s'}`;
+      const critical=linkFotoJsonProjectStats.filter(project=>project.emptyLinkFotoPercentage>50);
+      const alerts=critical.length?`<div class="linkfoto-alerts">${critical.map(project=>`<div class="linkfoto-alert"><strong>Atenção: ${escapeHtml(project.file)}</strong> possui ${project.emptyLinkFotoCount} de ${project.total} links de foto vazios (${project.emptyLinkFotoPercentage.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%). Avalie se a origem não disponibiliza imagens ou se a raspagem precisa ser corrigida.</div>`).join('')}</div>`:'';
+      byId('linkFotoJsonIssues').innerHTML=alerts+(issues.length?issues.map((issue,index)=>{
+        const link=/^https?:\/\//i.test(issue.linkReal || '')?`<a href="${escapeHtml(issue.linkReal)}" target="_blank" rel="noopener noreferrer">${escapeHtml(issue.linkReal)}</a>`:'(sem link)';
+        return `<div class="issue-card" data-key="${index}">
+          <div class="issue-meta">
+            <div><strong>Arquivo:</strong> ${escapeHtml(issue.file)}</div>
+            <div><strong>linkFoto:</strong> ${escapeHtml(issue.linkFoto || '(vazio)')}</div>
+            <div><strong>Título:</strong> ${escapeHtml(issue.titulo || '(vazio)')}</div>
+            <div><strong>Tipo:</strong> ${escapeHtml(issue.tipoImovel || '(vazio)')}</div>
+            <div><strong>Cidade:</strong> ${escapeHtml(issue.cidade || '(vazia)')}</div>
+            <div><strong>Bairro:</strong> ${escapeHtml(issue.bairro || '(vazio)')}</div>
+            <div><strong>LinkReal:</strong> ${link}</div>
+          </div>
+          <div class="issue-actions" style="margin-top:12px;">
+            <input class="linkfoto-manual-input" type="url" placeholder="Cole o link direto da foto" aria-label="Link manual da foto" style="width:100%;margin-bottom:8px;">
+            <button class="primary btn-resolve-linkfoto" data-file="${escapeHtml(issue.file)}" data-link-real="${escapeHtml(issue.linkReal)}">Salvar link da foto</button>
+            <button class="btn-confirm-linkfoto" title="Marcar este registro como revisado sem foto">Confirmar sem foto</button>
+            <div data-role="error" class="error-message" role="status"></div>
+          </div>
+        </div>`;
+      }).join(''):'<div class="issue-empty">Nenhum linkFoto pendente encontrado.</div>');
+      byId('linkFotoJsonIssues').querySelectorAll('.btn-resolve-linkfoto').forEach(button=>button.onclick=async()=>{
+        const card=button.closest('.issue-card');
+        const error=card.querySelector('[data-role="error"]'); error.textContent='';
+        const linkFoto=card.querySelector('.linkfoto-manual-input').value.trim();
+        if (!linkFoto) {error.textContent='Informe o link da foto.';return;}
+        try {
+          if (!['http:','https:'].includes(new URL(linkFoto).protocol)) throw new Error('Informe um link de foto HTTP ou HTTPS válido.');
+          button.disabled=true;button.textContent='Salvando...';
+          await api('/api/linkfoto-json-issues/resolve',{file:button.dataset.file,linkReal:button.dataset.linkReal,linkFoto});
+          await loadLinkFotoJsonIssues();
+        } catch(err) {error.textContent=err.message;button.disabled=false;button.textContent='Salvar link da foto';}
+      });
+    }
+    async function confirmarLinkFotoIndividual(button) {
+      const card=button.closest('.issue-card');
+      const issue=linkFotoJsonIssues[Number(card.dataset.key)];
+      const error=card.querySelector('[data-role="error"]');
+      error.textContent='';
+      button.disabled=true;button.textContent='Confirmando...';
+      try {
+        await api('/api/linkfoto-json-issues/confirm',{file:issue.file,linkReal:issue.linkReal,index:issue.index,linkFotoAtual:issue.linkFoto || '',confirmacao:true});
+        await loadLinkFotoJsonIssues();
+      } catch(err) {error.textContent=err.message;button.disabled=false;button.textContent='Confirmar sem foto';}
+    }
+    async function loadLinkFotoJsonIssues() {
+      byId('linkFotoJsonSummary').textContent='Checando linkFoto no JSON...';
+      byId('linkFotoJsonIssues').innerHTML='<div class="issue-empty">Buscando registros...</div>';
+      try {const data=await api('/api/linkfoto-json-issues');linkFotoJsonIssues=data.issues;linkFotoJsonProjectStats=data.projectStats;renderLinkFotoJsonIssues();byId('linkFotoJsonIssues').querySelectorAll('.btn-confirm-linkfoto').forEach(button=>button.onclick=()=>confirmarLinkFotoIndividual(button));}
+      catch(error) {byId('linkFotoJsonSummary').textContent='Falha ao checar linkFoto no JSON.';byId('linkFotoJsonIssues').innerHTML=`<div class="issue-empty">${escapeHtml(error.message)}</div>`;}
+    }
+    byId('btnCheckLinkFotoJson').onclick=loadLinkFotoJsonIssues;
+    byId('btnConfirmAllLinkFotoJson').onclick=async()=>{
+      if (!confirm('Confirmar todos os registros sem link de foto? Eles deixarão de aparecer como pendentes.')) return;
+      const button=byId('btnConfirmAllLinkFotoJson');button.disabled=true;
+      try {await api('/api/linkfoto-json-issues/confirm-all',{confirmacao:true});await loadLinkFotoJsonIssues();}
+      catch(error) {byId('linkFotoJsonSummary').textContent=error.message;}
+      finally {button.disabled=false;}
+    };
+    async function loadValidation() {
+      byId('validationSummary').textContent = 'Validando...';
+      try { const data = await api(`/api/validacoes?campo=${validationField}`); byId('validationRows').replaceChildren(); for (const issue of data.issues) { const row = document.createElement('tr'); cell(row,issue.imobiliaria); cell(row,issue.codigoBase); cell(row,issue.titulo); cell(row,issue.valor); cell(row,issue.problema); byId('validationRows').append(row); } byId('validationSummary').textContent = `${data.total} imóveis · ${data.issues.length} inconsistências`; }
+      catch(error) { byId('validationSummary').textContent = error.message; }
+    }
+    async function loadFilters() {
+      try { const data = await api(`/api/filtros?campo=${byId('filterType').value}`); byId('filterRows').replaceChildren(); for (const item of data.rows) { const row = document.createElement('tr'); cell(row,item.valor || '(vazio)'); cell(row,item.cidade); cell(row,item.quantidade); byId('filterRows').append(row); } byId('filterSummary').textContent = `${data.total} imóveis · ${data.rows.length} valores`; }
+      catch(error) { byId('filterSummary').textContent = error.message; }
+    }
+    async function loadDuplicates() {
+      byId('duplicateSummary').textContent = 'Verificando...';
+      try { const data = await api('/api/duplicados'); byId('duplicateRows').replaceChildren(); for (const item of data.groups) { const row = document.createElement('tr'); cell(row,item.identificacao); cell(row,item.imobiliarias.join(', ')); cell(row,item.quantidade); cell(row,item.tipo); byId('duplicateRows').append(row); } byId('duplicateSummary').textContent = `${data.total} imóveis · ${data.groups.length} grupos`; }
+      catch(error) { byId('duplicateSummary').textContent = error.message; }
+    }
+    byId('refreshValidation').onclick = loadValidation;
+    byId('refreshFilters').onclick = loadFilters;
+    byId('filterType').onchange = loadFilters;
+    byId('refreshDuplicates').onclick = loadDuplicates;
+    function renderPublicationSource() {
+      const typesense = publicationStage === 'typesense';
+      const json = typesense && byId('typesenseSource').value === 'json';
+      byId('typesenseSourceControls').hidden = !typesense;
+      byId('typesenseSourceInfo').hidden = !typesense;
+      byId('typesenseSourceInfo').textContent = json
+        ? 'Envio direto dos JSONs ativos de todos os projetos de aluguel. O Firestore não é consultado nem alterado; vendas não são alteradas.'
+        : 'Envio dos imóveis de aluguel publicados no Firestore. A seleção de imobiliárias da aba Raspagem não limita o envio ao Typesense.';
+      byId('publicationStageLabel').textContent = typesense
+        ? `${json ? 'JSON local' : '__alugueisPublicos'} → imoveis_alugueis`
+        : 'JSON → __alugueisPublicos';
+    }
+    byId('typesenseSource').onchange = renderPublicationSource;
+    async function loadPublication() {
+      try {
+        const data = await api('/api/publicacao');
+        byId('publicationPlan').replaceChildren();
+        for (const [label,value] of [['Perfil','Aluguéis'],['Firestore',data.profile.firestore],['Backup Firestore',data.profile.backup],['Typesense',data.profile.typesense],['Configuração Typesense',data.typesense?.message || ''],['Filtros Typesense',data.profile.filtrosPrefix+'*'],['Ativos locais',data.ativos],['Imobiliárias selecionadas',selected().length]]) {
+          const term = document.createElement('dt'); const description = document.createElement('dd'); term.textContent = label; description.textContent = value; byId('publicationPlan').append(term,description);
+        }
+      } catch(error) { byId('publicationMessage').textContent = error.message; }
+    }
+    async function publish(dryRun, stage = publicationStage, messageId = 'publicationMessage') {
+      byId(messageId).textContent = '';
+      const selectedScripts = selected();
+      const origem = stage === 'typesense' ? byId('typesenseSource').value : 'firestore';
+      if (stage !== 'typesense' && !selectedScripts.length) {byId(messageId).textContent='Selecione imobiliárias na aba Raspagem.';return;}
+      const confirmation = stage === 'firestore'
+        ? `Transmitir os JSONs de ALUGUÉIS dos ${selectedScripts.length} projetos selecionados para __alugueisPublicos?\nO conteúdo atual completo será copiado para __alugueisPublicos__backup antes da atualização.\nVendas e Typesense não serão alterados.`
+        : stage === 'typesense' && origem === 'json'
+          ? 'Transmitir todos os JSONs ativos de ALUGUÉIS diretamente para imoveis_alugueis e atualizar seus filtros?\nO Firestore e os dados de vendas não serão alterados.'
+          : `Confirmar publicação de ALUGUÉIS?\nEtapa: ${stage}\nFirestore: __alugueisPublicos\nTypesense: imoveis_alugueis`;
+      if (!dryRun && !confirm(confirmation)) return;
+      byId('previewPublication').disabled = true;
+      byId('publishPublication').disabled = true;
+      try {
+        const result = await api('/api/publicacao',{ etapa:stage,origem,simulacao:dryRun,confirmacao:!dryRun,selectedScripts });
+        if (result.started !== true) throw new Error('O servidor não confirmou o início da publicação.');
+        document.querySelector('[data-tab="raspagem"]').click();
+      } catch(error) { byId(messageId).textContent = error.message; }
+      finally {
+        byId('previewPublication').disabled = !!schedulerState.running;
+        byId('publishPublication').disabled = !!schedulerState.running;
+      }
+    }
+    byId('refreshPublication').onclick = loadPublication;
+    byId('previewPublication').onclick = () => publish(true);
+    byId('publishPublication').onclick = () => publish(false);
+    byId('btnPublishJson').onclick = () => publish(false,'firestore','jsonPublishMessage');
+    byId('selectAll').onclick = () => document.querySelectorAll('#projects input').forEach(input => input.checked = true);
+    byId('unselectAll').onclick = () => document.querySelectorAll('#projects input').forEach(input => input.checked = false);
+    byId('projectSearch').oninput = () => document.querySelectorAll('.rental-project').forEach(row => row.hidden = !row.textContent.toLowerCase().includes(byId('projectSearch').value.toLowerCase()));
+    byId('save').onclick = () => action(async () => { await api('/api/config',{ enabled:byId('enabled').checked,hour:byId('hour').value,selectedScripts:selected() }); byId('message').textContent = 'Agendamento salvo.'; });
+    byId('run').onclick = () => action(() => api('/api/run-now',{ selectedScripts:selected() }));
+    byId('stop').onclick = () => action(() => api('/api/stop',{}));
+    byId('clear').onclick = () => action(() => api('/api/logs/clear',{}));
+    byId('refreshSummary').onclick = loadSummary; byId('refreshRecords').onclick = loadRecords;
+    byId('collection').onchange = () => { page = 1; loadRecords(); };
+    let searchTimer; byId('search').oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { page = 1; loadRecords(); },250); };
+    byId('prev').onclick = () => { page--; loadRecords(); }; byId('next').onclick = () => { page++; loadRecords(); };
+    byId('closeDetails').onclick = () => byId('details').close();
+    socket.on('connect', () => byId('connection').textContent = 'Conectado'); socket.on('disconnect', () => byId('connection').textContent = 'Desconectado');
+    socket.on('scheduler:state', updateState); socket.on('scheduler:log', addLog); socket.on('scheduler:history', history => { byId('output').replaceChildren(); history.forEach(addLog); }); socket.on('logs:cleared', () => byId('output').replaceChildren());
+    socket.on('data:updated', () => { loadSummary(); if (byId('records').classList.contains('active')) loadRecords(); });
+    api('/api/config').then(data => {
+      projects = data.projects; byId('hour').value = data.config.hour; byId('enabled').checked = data.config.enabled;
+      for (const project of projects) {
+        const row = document.createElement('label'); row.className = 'rental-project'; row.dataset.project = project.name;
+        const input = document.createElement('input'); input.type = 'checkbox'; input.value = project.name; input.checked = data.config.selectedScripts.includes(project.name);
+        const title = document.createElement('span'); title.textContent = project.collection; const status = document.createElement('small'); row.append(input,title,status); byId('projects').append(row);
+        const option = document.createElement('option'); option.value = project.collection; option.textContent = project.collection; byId('collection').append(option);
+      }
+      updateState(data.state);
+    }).catch(error => byId('message').textContent = error.message);
+    icons();
+  </script>
+</body>
+</html>

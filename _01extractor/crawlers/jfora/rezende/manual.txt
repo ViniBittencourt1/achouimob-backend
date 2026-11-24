@@ -1,0 +1,3 @@
+PASSO 1 - extractor.js achar o link proncipal e definir a rota de visualizações (nomenclarura dos links)
+PASSO 2 - sheets.js - renomear a aba do sheets
+PASSO 3 - entender o fluxo da página e começar as extrações a partir do 01

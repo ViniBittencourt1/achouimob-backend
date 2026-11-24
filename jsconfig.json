@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "module": "es2020",
+    "target": "es2020",
+    "baseUrl": "./_01extractor",
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["_01extractor/**/*", "_02utils/_sincronizarFiltros/__imoveisPublicos.js", "_02utils/_sincronizarFiltros/publishImoveisPublicos.js"]
+}

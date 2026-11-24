@@ -1,0 +1,14 @@
+// Retorna a data de exclusão do linkReal no banco de dados
+// Deve ser preenchida quando o linkReal não for mais encontrado
+export function getDataExclusao() {
+  return new Date().toISOString();
+}
+
+// Extrai o link da foto de um card HTML
+// cardHtml: string (HTML do card)
+import { JSDOM } from 'jsdom';
+export function extractLinkFoto(cardHtml) {
+  const dom = new JSDOM(cardHtml);
+  const img = dom.window.document.querySelector('a.col.imovelcard__img > img');
+  return img ? img.src : '';
+}

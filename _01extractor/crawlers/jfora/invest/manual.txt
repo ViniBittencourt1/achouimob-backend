@@ -1,0 +1,8 @@
+Manual do crawler Invest
+
+O campo areaValor usa a area do card da listagem, em metros quadrados.
+O formato brasileiro remove pontos de milhar antes de converter a virgula
+decimal: 115,38 m2 -> 115.38 e 1.092,00 m2 -> 1092.
+A mesma conversao atende vendas e locacao. Areas ausentes permanecem em 0.
+Os registros existentes serao corrigidos na proxima coleta completa de cada
+negociacao; nao dividir valores antigos por 100 sem consultar o site.

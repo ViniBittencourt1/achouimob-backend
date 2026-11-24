@@ -1,0 +1,36 @@
+node_modules/
+
+# Variaveis de ambiente
+.env
+.env.*
+!.env.example
+
+# Credenciais
+credentials/
+**/credentials/
+firebase-key.json
+google-sheets.json
+service-account.json
+
+# Cache e arquivos temporarios
+.puppeteer-cache/
+*.log
+*.tmp
+logs/
+
+# Arquivos gerados
+_03database/outros/firestore-panel-cache.json
+_03database/outros/firestore-panel-cache.json.tmp
+
+# Dados operacionais e historicos nao devem entrar no repositorio
+crawler/*.json
+_03database/**/*.json
+_01extractor/crawlers/jfora/_1Jf/extracoes.json
+_01extractor/crawlers/jfora/_1Jf/site-scheduler-config.json
+
+# Binarios
+*.exe
+
+# Scripts locais de teste e exclusao
+_02utils/_corrigirFiltros/XXapagarJfFirestore.js
+tmp-test-linkfoto-leal*.mjs
