@@ -95,8 +95,10 @@ export function confirmarSemFotoAlugueis(backendRoot,projects) {
   return {ok:true,confirmed,total:pending.length};
 }
 
-export function aplicarCorrecoesFotoAlugueis(records,collection,backendRoot) {
-  const corrections=read(path.join(backendRoot,'_03database/outros/alugueis-linkfoto-correcoes.json'));
+export function aplicarCorrecoesFotoAlugueis(records,collection,backendRoot,suppliedCorrections) {
+  const corrections = suppliedCorrections === undefined
+    ? read(path.join(backendRoot,'_03database/outros/alugueis-linkfoto-correcoes.json')) : suppliedCorrections;
+  if (!Array.isArray(corrections)) throw new Error('Correcoes de foto de aluguel invalidas.');
   return records.map(item=>{
     const correction=corrections.find(saved=>saved.file===`${collection}Locacao.json` && (saved.linkReal===item.linkReal || (saved.codigoBase && String(saved.codigoBase)!=='0' && String(saved.codigoBase)===String(item.codigoBase))));
     return correction?{...item,linkFoto:correction.linkFoto}:item;

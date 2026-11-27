@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { resolverBairroCatalogo } from '../_utils/bairroCatalogo.js';
 // Extrai o campo localizacao de um card HTML
 // cardHtml: string (HTML do card)
-export function extractBairro(cardHtml, cidade = '') {
+export function extractBairro(cardHtml, cidade = '', bairrosInformados) {
 	const dom = new JSDOM(cardHtml);
 	const divLoc = dom.window.document.querySelector('div.imovel-item--localizacao');
 	const localizacao = divLoc ? divLoc.textContent.trim() : '';
@@ -28,7 +28,7 @@ export function extractBairro(cardHtml, cidade = '') {
 	// Normaliza: remove acentos, lowercase, remove pontuação isolada e espaços extras
 	const bairroNormalizado = bairro.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[.,-]/g, ' ').replace(/\s+/g, ' ').trim();
 
-	return resolverBairroCatalogo(bairroNormalizado, cidade);
+	return resolverBairroCatalogo(bairroNormalizado, cidade, bairrosInformados);
 
 	// Busca no jfBairros.json
 	const bairrosPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../../_03database/filtros/_jfBairros.json');

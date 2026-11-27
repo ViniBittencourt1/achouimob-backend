@@ -221,6 +221,76 @@ Sheets nao oferece comparacao atomica com a leitura anterior. Se houver erro
 apos iniciar a escrita, confira a aba e o backup indicado antes de repetir.
 O resumo de operacao GCS continua pendente e e independente deste envio.
 
+## Piloto compartilhado de Juiz de Fora
+
+O escopo `piloto-jf-compartilhado-20261124-01` e uma base isolada, nao oficial.
+Ele foi preparado com os documentos da base inicial e com a revisao 3 do
+piloto anterior da Universal. Auditorias e relatorios anteriores foram
+arquivados sob `_piloto-jf/universal-anterior/`, sem reapresenta-los como
+operacoes do escopo novo. Os dados dos demais projetos sao os da preparacao
+inicial, exceto os projetos e negociacoes que ja foram coletados neste escopo.
+
+Neste escopo, Universal, Alicerce, Almar, Bargon, Brasil e Casa Nova estao adaptadas
+para vendas e aluguel.
+As operacoes usam catalogos e correcoes do mesmo snapshot, preservam historicos
+e abortam em coleta incompleta ou falha nos detalhes. Os demais crawlers ainda
+precisam ser migrados e validados individualmente; nao execute os fluxos
+legados supondo que eles gravem neste escopo. Vendas e locacoes desses seis
+projetos foram validadas com coletas reais e releitura no GCS.
+
+Os comandos manuais na copia isolada sao:
+
+```powershell
+cd C:\Projetos\raspagemimoveis\backend-backup-limpo
+npm run universal:jf:vendas
+npm run universal:jf:aluguel
+npm run alicerce:jf:vendas
+npm run alicerce:jf:aluguel
+npm run almar:jf:vendas
+npm run almar:jf:aluguel
+npm run jf:gcs -- bargon venda
+npm run jf:gcs -- bargon aluguel
+npm run jf:gcs -- brasil venda
+npm run jf:gcs -- brasil aluguel
+npm run jf:gcs -- casaNova venda
+npm run jf:gcs -- casaNova aluguel
+```
+
+O comando `jf:gcs` aceita tambem `universal`, `alicerce`, `almar` ou
+`adaptados`, este ultimo executando sequencialmente somente os seis projetos
+listados, para a negociacao indicada. Ele interrompe o lote na primeira falha.
+Esses comandos leem `.env.piloto-jf`, ignorado pelo Git, e nao enviam ao Sheets
+nem publicam no Typesense. Anote o UUID impresso; em caso de falha, consulte a
+operacao antes de repetir. Os comandos antigos `universal:gcs` e
+`universal:gcs:enviar` continuam apontando para o piloto anterior configurado
+em `.env.piloto-universal`, nao para a base compartilhada. Nao execute os
+pilotos em paralelo esperando que compartilhem o mesmo lock: escopos
+diferentes nao se protegem mutuamente. O painel, os agendamentos e a operacao
+com dois computadores continuam pendentes de migracao e validacao.
+
+Para enviar manualmente uma negociacao da base compartilhada a sua aba
+existente na planilha de Juiz de Fora:
+
+```powershell
+npm run jf:gcs:enviar -- bargon aluguel
+npm run jf:gcs:enviar -- almar venda
+```
+
+O comando tambem aceita `universal`, `alicerce`, `brasil` e `casaNova`. Ele usa o ID da planilha e a
+credencial de leitura e escrita configurados em `.env.piloto-universal`, mas
+le os imoveis e a configuracao de GCS de `.env.piloto-jf`. Antes de escrever,
+valida aba, cabecalho e snapshot e salva um backup verificado no GCS; altera
+somente as linhas da negociacao escolhida e confirma por releitura. Snapshot
+vazio e recusado. O envio do aluguel Bargon foi validado na planilha real,
+preservando as vendas. As abas Brasil e Casa Nova tiveram cabecalhos e capacidade
+verificados, mas seus envios ainda nao foram testados. O resumo da operacao GCS
+continua pendente.
+
+Pause os crawlers legados e nao edite a aba durante o envio: eles nao usam o
+lock do piloto e o Sheets nao oferece comparacao atomica com a leitura
+anterior. Em caso de erro apos o inicio da escrita, confira a aba e o backup
+antes de repetir. Este comando nao publica no Typesense.
+
 Os scripts leem variaveis de ambiente do processo. Em PowerShell, na copia
 isolada, configure-as localmente (nao registre credenciais em arquivos Git):
 

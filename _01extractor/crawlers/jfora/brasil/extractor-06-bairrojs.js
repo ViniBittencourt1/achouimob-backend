@@ -4,21 +4,21 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { resolverBairroCatalogo } from '../_utils/bairroCatalogo.js';
 
-function extrairBairroDoLink(linkReal, cidade) {
+function extrairBairroDoLink(linkReal, cidade, bairrosInformados) {
 	const cidadeNoLink = String(cidade || '').replace(/-mg$/, '').replace(/-/g, '_');
 	if (!linkReal || !cidadeNoLink) return '';
 
 	const bairroNoLink = String(linkReal).match(new RegExp(`--(.+?)--${cidadeNoLink}--[a-z]{2}--`, 'i'))?.[1];
-	return bairroNoLink ? resolverBairroCatalogo(bairroNoLink, cidade) : '';
+	return bairroNoLink ? resolverBairroCatalogo(bairroNoLink, cidade, bairrosInformados) : '';
 }
 
 // Extrai o campo localizacao de um card HTML
 // cardHtml: string (HTML do card)
-export function extractBairro(cardHtml, cidade = '', linkReal = '') {
+export function extractBairro(cardHtml, cidade = '', linkReal = '', bairrosInformados) {
 	const dom = new JSDOM(cardHtml);
 	const divLoc = dom.window.document.querySelector('div.imovel-item--localizacao');
 	const localizacao = divLoc ? divLoc.textContent.trim() : '';
-	if (!localizacao) return extrairBairroDoLink(linkReal, cidade);
+	if (!localizacao) return extrairBairroDoLink(linkReal, cidade, bairrosInformados);
 
 	// Normaliza para busca de "bairro"
 	const localizacaoNorm = localizacao.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
@@ -37,7 +37,7 @@ export function extractBairro(cardHtml, cidade = '', linkReal = '') {
 	// Normaliza: remove acentos, lowercase, remove pontuação isolada e espaços extras
 	const bairroNormalizado = bairro.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[.,-]/g, ' ').replace(/\s+/g, ' ').trim();
 
-	return resolverBairroCatalogo(bairroNormalizado, cidade) || extrairBairroDoLink(linkReal, cidade);
+	return resolverBairroCatalogo(bairroNormalizado, cidade, bairrosInformados) || extrairBairroDoLink(linkReal, cidade, bairrosInformados);
 
 	// Busca no jfBairros.json
 	const bairrosPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../../_03database/filtros/_jfBairros.json');

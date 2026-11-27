@@ -8,7 +8,7 @@ import { resolverBairroCatalogo } from '../_utils/bairroCatalogo.js';
 // cidade: slug da cidade já identificada para este card (opcional), usado para
 // restringir a busca no catálogo aos bairros daquela cidade e evitar colisão
 // entre cidades diferentes que possuem bairro com o mesmo nome.
-export function extractBairro(cardHtml, cidade = '', linkReal = '') {
+export function extractBairro(cardHtml, cidade = '', linkReal = '', bairrosInformados) {
 	const dom = new JSDOM(cardHtml);
 	const divLoc = dom.window.document.querySelector('div.imovel-item--localizacao');
 	const localizacao = divLoc ? divLoc.textContent.trim() : '';
@@ -34,10 +34,10 @@ export function extractBairro(cardHtml, cidade = '', linkReal = '') {
 	const bairrosPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../../_03database/filtros/_jfBairros.json');
 	let bairrosList = [];
 	try {
-		bairrosList = JSON.parse(fs.readFileSync(bairrosPath, 'utf8'));
+		bairrosList = bairrosInformados === undefined ? JSON.parse(fs.readFileSync(bairrosPath, 'utf8')) : bairrosInformados;
 	} catch (e) {
 		// Se não conseguir ler, retorna o valor em maiúsculas
-		return resolverBairroCatalogo(bairroNormalizado, cidade);
+		return resolverBairroCatalogo(bairroNormalizado, cidade, bairrosInformados);
 	}
 
 	const cidadeNormalizada = cidade
@@ -75,5 +75,5 @@ export function extractBairro(cardHtml, cidade = '', linkReal = '') {
 		}
 	}
 	// Se não encontrar, retorna o valor encontrado em maiúsculas
-	return resolverBairroCatalogo(bairroNormalizado || bairroDoLinkNormalizado, cidade);
+	return resolverBairroCatalogo(bairroNormalizado || bairroDoLinkNormalizado, cidade, bairrosInformados);
 }

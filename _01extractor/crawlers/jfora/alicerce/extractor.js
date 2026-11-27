@@ -114,14 +114,14 @@ export async function extractListagemAlicerce(browser, linksBusca, options = {})
 			for (const html of cards) {
 				const titulo = await extractTitulo(html);
 				const linkReal = await extractLinkReal(html);
-				const cidade = extractCidadeFromCardHtml(html, linkReal);
+				const cidade = extractCidadeFromCardHtml(html, linkReal, options.catalogos?.cidades);
 				const imovel = {
 					linkReal,
 					titulo,
 					preco: await extractPreco(html, options.negociacao),
 					localizacao: await extractLocalizacao(html),
-					tipoImovel: await extractTipoImovel(html),
-					bairro: await extractBairro(html, cidade),
+					tipoImovel: await extractTipoImovel(html, options.catalogos?.tipos),
+					bairro: await extractBairro(html, cidade, options.catalogos?.bairros),
 					cidade,
 					dormitorioValor: await extractDormitorioValor(html),
 					banheiroValor: await extractBanheiroValor(html),
@@ -139,6 +139,7 @@ export async function extractListagemAlicerce(browser, linksBusca, options = {})
 				};
 				allImoveis.push(imovel);
 				totalCards++;
+				if (options.liberarMemoria && totalCards % 20 === 0 && global.gc) global.gc();
 			}
 			console.log(`[${idx + 1}] Total acumulado de cards: ${totalCards}`);
 		} finally {

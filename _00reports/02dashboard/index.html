@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Movimentacao de imoveis | Dashboard</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #172f40; background: #f3f6f9; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 1440px; margin: auto; padding: 32px 24px; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+    h1 { margin: 8px 0; font-size: clamp(24px, 4vw, 34px); }
+    p { line-height: 1.6; }
+    .eyebrow { color: #197568; font-weight: 700; font-size: 12px; letter-spacing: 2px; }
+    .muted, #meta { color: #536979; font-size: 14px; }
+    button, select, input { font: inherit; border: 1px solid #b5c6cf; border-radius: 8px; padding: 10px 12px; background: white; color: #172f40; min-height: 44px; }
+    button { cursor: pointer; }
+    button.primary { background: #145d53; color: white; border-color: #145d53; }
+    button:disabled { opacity: .6; cursor: default; }
+    :focus-visible { outline: 3px solid #2087b8; outline-offset: 3px; }
+    form, .list, .card, .ranking { background: white; border: 1px solid #dce5eb; border-radius: 12px; }
+    form { display: flex; flex-wrap: wrap; gap: 16px; padding: 20px; align-items: end; margin: 24px 0; }
+    label { display: flex; flex-direction: column; gap: 7px; font-size: 13px; font-weight: 600; flex: 1 1 150px; min-width: 0; max-width: 100%; }
+    select, input { min-width: 0; width: 100%; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .financial { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 16px; }
+    .financial strong { font-size: clamp(22px, 3vw, 32px); overflow-wrap: anywhere; }
+    .navigation { display: flex; gap: 12px; margin-top: 20px; }
+    .navigation a { padding: 12px 24px; border-radius: 8px; border: 1px solid #b5c6cf; text-decoration: none; }
+    .navigation a[aria-current="page"] { background: #145d53; color: white; border-color: #145d53; }
+    .card { padding: 20px; border-top: 3px solid #208779; }
+    .card strong { display: block; font-size: 34px; margin: 10px 0 0; }
+    .card small { color: #536979; }
+    .notice { padding: 14px 18px; border-left: 3px solid #bc8923; background: #fff9e9; font-size: 13px; }
+    #error { background: #fff0ef; color: #9c2525; padding: 16px; border-radius: 8px; }
+    .list { margin-top: 20px; overflow: hidden; }
+    .ranking { margin-top: 20px; padding: 20px; }
+    .temporal-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; margin-top: 20px; }
+    .temporal-panel { min-width: 0; background: white; border: 1px solid #dce5eb; border-radius: 12px; padding: 20px; }
+    .temporal-chart { overflow-x: auto; margin-top: 18px; }
+    .temporal-chart svg { display: block; min-width: 100%; height: 260px; }
+    .temporal-chart text { font-family: system-ui, sans-serif; fill: #536979; font-size: 12px; }
+    #comparison-form { border: 0; padding: 0; margin: 16px 0; gap: 12px; }
+    #comparison-form label { flex-basis: 120px; }
+    #comparison-form label:first-child { flex-basis: 100%; }
+    .comparison-row { margin: 16px 0; font-size: 13px; }
+    .comparison-row strong { display: block; font-size: 26px; margin: 4px 0; }
+    .comparison-track { height: 14px; border-radius: 5px; background: #edf3f6; overflow: hidden; }
+    .comparison-bar { height: 100%; background: #218779; }
+    .comparison-row.previous .comparison-bar { background: #2087b8; }
+    #comparison-delta { font-size: 20px; font-weight: 700; }
+    #temporal-error { color: #9c2525; grid-column: 1 / -1; margin: 0; }
+    @media (max-width: 950px) { .temporal-layout { grid-template-columns: 1fr; } }
+    .ranking-head { display: flex; justify-content: space-between; align-items: start; gap: 20px; flex-wrap: wrap; }
+    .ranking-head label { flex: 0 1 270px; }
+    #ranking-description { margin-bottom: 0; }
+    .ranking-chart { max-height: 480px; overflow-y: auto; margin: 20px 0 0; padding: 0; list-style: none; }
+    .ranking-row { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(100px, 2fr) minmax(130px, auto); align-items: center; gap: 8px 18px; padding: 14px 6px; border-top: 1px solid #edf2f5; }
+    .ranking-name { overflow-wrap: anywhere; font-size: 14px; }
+    .ranking-name small, .ranking-value small { display: block; color: #536979; font-size: 12px; margin-top: 4px; font-weight: 400; }
+    .ranking-track { display: block; width: 100%; min-height: 44px; padding: 12px 0; border: 0; background: transparent; }
+    .ranking-track-inner { display: block; height: 18px; background: #edf4f2; border-radius: 5px; overflow: hidden; }
+    .ranking-bar { height: 100%; background: linear-gradient(90deg, #218779, #60b8a4); border-radius: 5px; }
+    .ranking-value { text-align: right; font-size: 14px; overflow-wrap: anywhere; }
+    .ranking-metrics { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 22px; color: #536979; font-size: 13px; }
+    dialog { width: min(1440px, 96vw); max-width: 96vw; max-height: 90vh; padding: 20px; border: 1px solid #b5c6cf; border-radius: 12px; color: #172f40; }
+    dialog[open] { display: flex; flex-direction: column; }
+    dialog .scroll { min-height: 0; overflow: auto; }
+    dialog .dialog-head, dialog .pagination { flex-shrink: 0; }
+    dialog th:nth-child(9), dialog th:nth-child(10),
+    dialog td:nth-child(9), dialog td:nth-child(10) { white-space: nowrap; }
+    dialog::backdrop { background: rgba(15, 36, 48, .65); }
+    .dialog-head { display: flex; justify-content: space-between; gap: 16px; align-items: start; }
+    #detail-error { color: #9c2525; }
+    #ranking-empty { padding: 24px 0; }
+    .list-head, .pagination { padding: 18px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+    h2 { font-size: 18px; margin: 0; }
+    .scroll { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; text-align: left; }
+    th { background: #edf3f6; color: #405d70; }
+    td, th { padding: 14px 16px; border-bottom: 1px solid #e8eef2; }
+    td:first-child { min-width: 260px; max-width: 390px; }
+    td small { display: block; margin-top: 6px; color: #536979; overflow-wrap: anywhere; }
+    a { color: #11695d; }
+    [hidden] { display: none !important; }
+    @media (max-width: 650px) {
+      main { padding: 20px 12px; }
+      header { align-items: flex-start; flex-direction: column; }
+      .cards { grid-template-columns: 1fr; gap: 10px; }
+      .card { padding: 14px; }
+      .card strong { font-size: 28px; }
+      .ranking { padding: 14px; }
+      .ranking-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+      .ranking-track { grid-row: 2; grid-column: 1 / -1; height: 12px; }
+      .ranking-track { height: auto; }
+      .ranking-value { grid-row: 1; grid-column: 2; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><div class="eyebrow">DADOS LOCAIS / SOMENTE LEITURA</div><h1 id="screen-title">Movimentacao de imoveis</h1>
+      <p class="muted">Entradas e retiradas dos anuncios registrados nos JSONs.</p></div>
+    <button id="refresh" type="button">Atualizar JSONs</button>
+  </header>
+  <nav class="navigation" aria-label="Movimentacoes">
+    <a id="nav-entradas" href="/entradas">Entradas</a>
+    <a id="nav-saidas" href="/saidas">Saidas</a>
+  </nav>
+  <form id="filters">
+    <label>Cidade<select id="cidade"><option value="">Todas as cidades</option><option value="juiz-de-fora-mg" selected>juiz-de-fora-mg</option></select></label>
+    <label>Tipo de imovel<select id="tipo"><option value="">Todos os tipos</option></select></label>
+    <label>Negociacao<select id="negociacao"><option value="venda">Venda</option><option value="aluguel">Aluguel</option><option value="todos">Venda e aluguel</option></select></label>
+    <label>Periodo<select id="periodo"><option value="7">Ultimos 7 dias</option><option value="30">Ultimos 30 dias</option><option value="365">Ultimos 365 dias</option><option value="custom">Personalizado</option></select></label>
+    <label>De<input type="date" id="inicio" required></label>
+    <label>Ate<input type="date" id="fim" required></label>
+    <button class="primary" type="submit">Aplicar filtros</button>
+  </form>
+  <p id="error" role="alert" hidden></p>
+  <div id="results">
+    <section class="cards" aria-label="Resumo">
+      <article class="card" id="card-entradas" hidden>Entradas no periodo<strong id="entradas">-</strong><small>Primeira inclusao registrada na base</small></article>
+      <article class="card" id="card-saidas" hidden>Retiradas no periodo<strong id="saidas">-</strong><small>Saida do anuncio, sem venda confirmada</small></article>
+      <article class="card">Ativos na base atual<strong id="ativos">-</strong><small>Estoque atual, independente do periodo. <a id="nav-ativos" href="/ativos">Ver ativos</a></small></article>
+    </section>
+    <section class="cards financial" aria-label="Valores anunciados da tela">
+      <article class="card">Total $ Vendas<strong id="total-vendas">-</strong><small id="total-vendas-info">Soma dos precos anunciados de venda desta tela</small></article>
+      <article class="card">Valor m&sup2; (venda)<strong id="valor-m2">-</strong><small id="valor-m2-info">Soma dos precos / soma das areas validas</small></article>
+      <article class="card">Ticket medio (venda)<strong id="ticket-medio">-</strong><small id="ticket-medio-info">Media dos precos anunciados de venda desta tela</small></article>
+    </section>
+    <section id="temporal-section" class="temporal-layout" aria-label="Evolucao e comparativo de movimentacoes">
+      <div class="temporal-panel">
+        <div class="ranking-head">
+          <div><div class="eyebrow">EVOLUCAO NO TEMPO</div><h2 id="temporal-title">Movimentacoes no periodo</h2></div>
+          <label>Agrupar por<select id="escala">
+            <option value="auto">Automatico pelo periodo</option><option value="dia">Dia</option>
+            <option value="semana">Semana</option><option value="mes">Mes</option><option value="ano">Ano</option>
+          </select></label>
+        </div>
+        <p id="temporal-context" class="muted"></p>
+        <div id="temporal-chart" class="temporal-chart"></div>
+        <details><summary>Ver numeros de cada intervalo</summary>
+          <div class="scroll"><table><thead><tr><th>Intervalo</th><th>Quantidade</th><th>Variacao vs. intervalo anterior</th></tr></thead><tbody id="temporal-rows"></tbody></table></div>
+        </details>
+      </div>
+      <div class="temporal-panel">
+        <div class="eyebrow">COMPARATIVO DE PERIODOS</div><h2 id="comparison-title">Mesmo filtro, outras datas</h2>
+        <form id="comparison-form">
+          <label>Comparar periodo filtrado com<select id="comparacao-modo">
+            <option value="mesAnterior">Mesmas datas do mes anterior</option><option value="personalizado">Escolher outras datas</option>
+          </select></label>
+          <label>De<input id="compararInicio" type="date" readonly></label>
+          <label>Ate<input id="compararFim" type="date" readonly></label>
+          <button type="submit">Comparar</button>
+        </form>
+        <div id="comparison-results" aria-live="polite"></div>
+      </div>
+      <p id="temporal-error" role="alert" hidden></p>
+    </section>
+    <section class="ranking" aria-labelledby="ranking-title">
+      <div class="ranking-head">
+        <div><div class="eyebrow">RANKING POR BAIRRO</div><h2 id="ranking-title">Movimentacao por bairros</h2>
+          <p id="ranking-description" class="muted" aria-live="polite">Considera todos os anuncios dos filtros, nao apenas a pagina atual.</p></div>
+        <label>Ordenar bairros por<select id="ranking-criterio">
+          <option value="quantidade">Quantidade de imoveis</option>
+          <option value="totalVendas">Total $ Vendas</option>
+          <option value="ticketMedio">Ticket medio (venda)</option>
+        </select></label>
+      </div>
+      <ol id="ranking-chart" class="ranking-chart" tabindex="0" aria-label="Bairros em ordem decrescente do criterio selecionado"></ol>
+      <p id="ranking-empty" class="muted" hidden>Nenhuma movimentacao encontrada com estes filtros.</p>
+    </section>
+    <section class="list">
+      <div class="list-head"><h2 id="list-title">Lista de imoveis</h2>
+        <span class="muted" id="duration-info">Permanencia: da inclusao ate a retirada, ou ate hoje se ativo.</span>
+      </div>
+      <div class="scroll"><table>
+        <thead><tr><th>Imovel / codigo</th><th>Cidade / bairro</th><th>Tipo</th><th>Imobiliaria</th><th>Negociacao</th><th>Preco registrado</th><th>Inclusao</th><th>Retirada</th><th>Tempo de permanencia</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+      <div class="pagination"><span id="page-info" role="status" aria-live="polite">Carregando bases...</span><div>
+        <button id="previous" type="button" disabled>Anterior</button> <button id="next" type="button" disabled>Proxima</button>
+      </div></div>
+    </section>
+    <p id="disclaimer" class="notice">Uma retirada nao comprova venda ou locacao: o anuncio pode ter sido pausado ou removido.
+      As datas indicam quando o sistema registrou a movimentacao, nao necessariamente quando ela ocorreu no mercado.
+      Contagem por imobiliaria e link; um mesmo imovel anunciado por imobiliarias diferentes pode aparecer mais de uma vez.</p>
+    <p id="warnings" class="notice" hidden></p>
+  </div>
+  <p id="meta">Fonte: backend-backup-limpo / crawler. Nenhum dado sera alterado.</p>
+</main>
+<dialog id="detail-dialog" aria-labelledby="detail-title">
+  <div class="dialog-head"><div><h2 id="detail-title">Imoveis do bairro</h2>
+    <p class="muted" id="detail-context"></p><p class="muted" id="detail-m2-reference"></p></div><button id="detail-close" type="button" autofocus>Fechar</button></div>
+  <p id="detail-error" role="alert" hidden></p>
+  <div class="scroll"><table>
+    <thead><tr><th>Imovel / codigo</th><th>Cidade / bairro</th><th>Tipo</th><th>Imobiliaria</th><th>Negociacao</th><th>Preco registrado</th><th>Valor m&sup2; (venda)</th><th>Variacao m&sup2; / bairro</th><th>Inclusao</th><th>Retirada</th><th>Tempo de permanencia</th></tr></thead>
+    <tbody id="detail-rows"></tbody>
+  </table></div>
+  <div class="pagination"><span id="detail-page-info" role="status" aria-live="polite"></span><div>
+    <button id="detail-previous" type="button" disabled>Anterior</button> <button id="detail-next" type="button" disabled>Proxima</button>
+  </div></div>
+</dialog>
+<script>
+  const $ = id => document.getElementById(id);
+  const count = new Intl.NumberFormat('pt-BR');
+  const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+  const percent = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const visao = location.pathname === '/saidas' ? 'saidas' : location.pathname === '/ativos' ? 'ativos' : 'entradas';
+  $('card-entradas').hidden = visao === 'saidas';
+  $('card-saidas').hidden = visao === 'entradas';
+  $('temporal-section').hidden = visao === 'ativos';
+  const titles = { entradas: 'Entradas no periodo', saidas: 'Saidas no periodo', ativos: 'Ativos atuais (sem filtro de data)' };
+  $('screen-title').textContent = `Movimentacao de imoveis - ${titles[visao]}`;
+  $('list-title').textContent = titles[visao];
+  document.title = `${titles[visao]} | Dashboard`;
+  $(`nav-${visao}`).setAttribute('aria-current', 'page');
+  let page = 1;
+  let busy = false;
+  let appliedParams;
+  let detailParams;
+  let detailValorM2Bairro = null;
+  let detailPage = 1;
+  let detailBusy = false;
+  let detailRequest = 0;
+  let initialType = new URLSearchParams(location.search).get('tipo') || '';
+  let initialRanking = new URLSearchParams(location.search).get('ranking') || '';
+  const dateText = value => value ? value.split('-').reverse().join('/') : '-';
+  const localDay = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  function preset() {
+    if ($('periodo').value === 'custom') return;
+    const today = new Date();
+    const start = new Date(today);
+    start.setDate(start.getDate() - Number($('periodo').value) + 1);
+    $('inicio').value = localDay(start);
+    $('fim').value = localDay(today);
+  }
+  function cell(row, text, small) {
+    const td = document.createElement('td');
+    td.textContent = text;
+    if (small) {
+      const detail = document.createElement('small');
+      detail.textContent = small;
+      td.append(detail);
+    }
+    row.append(td);
+    return td;
+  }
+  function filterParams() {
+    const params = new URLSearchParams({ periodo: $('periodo').value, ranking: $('ranking-criterio').value });
+    for (const id of ['cidade', 'tipo', 'negociacao', 'inicio', 'fim']) params.set(id, $(id).value);
+    temporalParams(params);
+    return params;
+  }
+  function temporalParams(params) {
+    params.set('escala', $('escala').value);
+    params.delete('compararInicio');
+    params.delete('compararFim');
+    if ($('comparacao-modo').value === 'personalizado') {
+      for (const id of ['compararInicio', 'compararFim']) params.set(id, $(id).value);
+    }
+  }
+  function updateNavigation() {
+    const params = filterParams();
+    for (const screen of ['entradas', 'saidas', 'ativos']) $(`nav-${screen}`).href = `/${screen}?${params}`;
+  }
+  function options(id, values, placeholder) {
+    const selection = $(id).value;
+    $(id).replaceChildren(new Option(placeholder, ''));
+    for (const value of values) $(id).add(new Option(value, value));
+    if (selection && !values.includes(selection)) $(id).add(new Option(selection, selection));
+    $(id).value = selection;
+  }
+  function renderRecords(target, records, compararM2 = false, valorM2Bairro = null) {
+    target.replaceChildren();
+    for (const record of records) {
+      const row = document.createElement('tr');
+      const title = cell(row, '', record.codigo);
+      let safeLink;
+      try {
+        const url = new URL(record.linkReal);
+        if (['https:', 'http:'].includes(url.protocol)) safeLink = url.href;
+      } catch { /* Registros sem link podem ser identificados pelo codigo. */ }
+      const name = document.createElement(safeLink ? 'a' : 'span');
+      name.textContent = record.titulo;
+      if (safeLink) { name.href = safeLink; name.target = '_blank'; name.rel = 'noopener noreferrer'; }
+      title.prepend(name);
+      cell(row, record.cidade, record.bairro);
+      cell(row, record.tipo);
+      cell(row, record.imobiliaria, record.arquivo);
+      cell(row, record.negociacao === 'venda' ? 'Venda' : 'Aluguel');
+      cell(row, record.preco === null ? 'Nao informado' : money.format(record.preco));
+      if (compararM2) {
+        const valorM2 = record.negociacao === 'venda' && Number.isFinite(record.preco) && record.preco > 0
+          && Number.isFinite(record.area) && record.area > 0 ? record.preco / record.area : null;
+        const variacao = Number.isFinite(valorM2) && Number.isFinite(valorM2Bairro) && valorM2Bairro > 0
+          ? (valorM2 / valorM2Bairro - 1) * 100 : null;
+        cell(row, Number.isFinite(valorM2) ? `${money.format(valorM2)} / m\u00b2` : '-');
+        cell(row, Number.isFinite(variacao)
+          ? `${variacao > 0 ? '+' : ''}${percent.format(variacao)}%` : '-');
+      }
+      cell(row, dateText(record.inclusao));
+      cell(row, dateText(record.exclusao));
+      cell(row, record.permanenciaDias === null ? 'Nao disponivel' : `${count.format(record.permanenciaDias)} ${record.permanenciaDias === 1 ? 'dia' : 'dias'}`);
+      target.append(row);
+    }
+    if (!records.length) {
+      const row = document.createElement('tr');
+      cell(row, 'Nenhum anuncio encontrado com estes filtros.').colSpan = compararM2 ? 11 : 9;
+      target.append(row);
+    }
+  }
+  async function loadDetail() {
+    if (detailBusy) return;
+    detailBusy = true;
+    const request = ++detailRequest;
+    $('detail-previous').disabled = $('detail-next').disabled = true;
+    $('detail-error').hidden = true;
+    $('detail-page-info').textContent = 'Carregando imoveis...';
+    $('detail-m2-reference').textContent = 'Calculando referencia do bairro...';
+    const params = new URLSearchParams(detailParams);
+    params.set('pagina', String(detailPage));
+    try {
+      const response = await fetch(`/api/relatorio?${params}`);
+      const data = await response.json();
+      if (request !== detailRequest) return;
+      if (!response.ok) throw new Error(data.erro || `HTTP ${response.status}`);
+      const referencia = Object.hasOwn(data, 'valorM2Bairro') ? data.valorM2Bairro : detailValorM2Bairro;
+      renderRecords($('detail-rows'), data.registros, true, referencia);
+      $('detail-m2-reference').textContent = `M\u00b2 de referencia do bairro: ${Number.isFinite(referencia) && referencia > 0 ? `${money.format(referencia)} / m\u00b2` : '-'}. Soma dos precos / soma das areas validas em toda a selecao do bairro. Variacao positiva indica acima da referencia; negativa, abaixo.`;
+      detailPage = data.pagina;
+      $('detail-page-info').textContent = `${count.format(data.total)} anuncios | Pagina ${data.pagina} de ${data.paginas}`;
+      $('detail-previous').disabled = data.pagina <= 1;
+      $('detail-next').disabled = data.pagina >= data.paginas;
+    } catch (error) {
+      if (request !== detailRequest) return;
+      $('detail-rows').replaceChildren();
+      $('detail-page-info').textContent = 'Nao foi possivel carregar os imoveis.';
+      $('detail-m2-reference').textContent = '';
+      $('detail-error').textContent = `Falha ao carregar o bairro: ${error.message}`;
+      $('detail-error').hidden = false;
+    } finally { if (request === detailRequest) detailBusy = false; }
+  }
+  function openDetail(item) {
+    detailValorM2Bairro = item.valorM2;
+    detailParams = new URLSearchParams(appliedParams);
+    detailParams.set('bairro', item.bairro);
+    detailParams.set('bairroCidade', item.cidade);
+    detailPage = 1;
+    $('detail-rows').replaceChildren();
+    $('detail-title').textContent = `${item.bairro || 'Bairro nao informado'} - ${item.cidade}`;
+    $('detail-context').textContent = `${titles[visao]}. Mesmos filtros aplicados ao grafico. ${detailParams.get('ranking') === 'quantidade' ? 'Todos os anuncios que compoem a quantidade.' : 'Somente anuncios de venda com preco valido que compoem o valor.'} Valores sao precos anunciados.`;
+    $('detail-dialog').showModal();
+    loadDetail();
+  }
+  function renderRanking(data) {
+    const quantity = data.criterioRanking === 'quantidade';
+    const criterios = { quantidade: 'Quantidade de imoveis', totalVendas: 'Total $ Vendas', ticketMedio: 'Ticket medio (venda)' };
+    $('ranking-title').textContent = `${titles[visao]} por bairro`;
+    $('ranking-description').textContent = `${criterios[data.criterioRanking]} | ${count.format(data.rankingBairros.length)} bairros | Lista filtrada completa. ${data.criterioRanking === 'ticketMedio' ? 'Percentual: desvio do ticket medio geral.' : 'Percentual: participacao no total do filtro.'} Clique na barra para ver os anuncios. Valores financeiros sao precos anunciados de venda.`;
+    $('ranking-chart').replaceChildren();
+    $('ranking-chart').scrollTop = 0;
+    $('ranking-empty').hidden = data.rankingBairros.length > 0;
+    const max = data.rankingBairros[0]?.valor || 0;
+    data.rankingBairros.forEach((item, index) => {
+      const row = document.createElement('li');
+      row.className = 'ranking-row';
+      const name = document.createElement('div');
+      name.className = 'ranking-name';
+      const bairro = item.bairro ? item.bairro.replace(/-/g, ' ') : 'Bairro nao informado';
+      name.textContent = `${index + 1}. ${bairro}`;
+      const city = document.createElement('small');
+      city.textContent = item.cidade;
+      name.append(city);
+      const track = document.createElement('button');
+      track.type = 'button';
+      track.className = 'ranking-track';
+      track.setAttribute('aria-label', `Ver imoveis de ${bairro}, ${item.cidade}`);
+      track.addEventListener('click', () => openDetail(item));
+      const trackInner = document.createElement('span');
+      trackInner.className = 'ranking-track-inner';
+      const bar = document.createElement('div');
+      bar.className = 'ranking-bar';
+      bar.style.width = `${max && item.valor !== null ? item.valor / max * 100 : 0}%`;
+      trackInner.append(bar);
+      track.append(trackInner);
+      const value = document.createElement('strong');
+      value.className = 'ranking-value';
+      value.textContent = item.valor === null ? 'Nao disponivel' : quantity ? count.format(item.valor) : money.format(item.valor);
+      const share = document.createElement('small');
+      share.textContent = item.percentual === null ? 'Percentual nao disponivel' : data.criterioRanking === 'ticketMedio'
+        ? `${item.percentual > 0 ? '+' : ''}${percent.format(item.percentual)}% em relacao ao ticket geral`
+        : `${percent.format(item.percentual)}% do total`;
+      value.append(share);
+      const metrics = document.createElement('div');
+      metrics.className = 'ranking-metrics';
+      for (const text of [
+        `Imoveis: ${count.format(item.quantidade)}`,
+        `Ticket medio (venda): ${item.ticketMedio === null ? 'Nao disponivel' : money.format(item.ticketMedio)}`,
+        `Valor m\u00b2 (venda): ${item.valorM2 === null ? 'Nao disponivel' : money.format(item.valorM2)}`,
+        `Total anunciado (venda): ${item.totalVendas === null ? 'Nao disponivel' : money.format(item.totalVendas)}`,
+      ]) {
+        const metric = document.createElement('span');
+        metric.textContent = text;
+        metrics.append(metric);
+      }
+      row.append(name, track, value, metrics);
+      $('ranking-chart').append(row);
+    });
+  }
+  function renderTemporal(temporal) {
+    $('temporal-error').hidden = true;
+    $('temporal-chart').replaceChildren();
+    $('temporal-rows').replaceChildren();
+    $('comparison-results').replaceChildren();
+    if (visao === 'ativos') return;
+    if (!temporal) {
+      $('temporal-error').textContent = 'O servidor ainda nao suporta o grafico temporal. Encerre com Ctrl+C, execute npm run dash novamente e atualize a pagina.';
+      $('temporal-error').hidden = false;
+      return;
+    }
+    const escalas = { dia: 'diaria', semana: 'semanal', mes: 'mensal', ano: 'anual' };
+    const { pontos, comparacao: comparison } = temporal;
+    $('temporal-title').textContent = `${visao === 'saidas' ? 'Saidas' : 'Entradas'} - evolucao ${escalas[temporal.escala]}`;
+    $('comparison-title').textContent = `Comparativo de ${visao === 'saidas' ? 'saidas' : 'entradas'}`;
+    $('temporal-context').textContent = `${dateText(comparison.inicioAtual)} a ${dateText(comparison.fimAtual)} | ${count.format(comparison.totalAtual)} movimentacoes. Semanas de segunda a domingo; meses e anos civis. Intervalos nas bordas podem ser parciais.`;
+    $('compararInicio').value = comparison.inicioAnterior;
+    $('compararFim').value = comparison.fimAnterior;
+    const signedPercent = value => value === null ? 'Sem base percentual' : `${value > 0 ? '+' : ''}${percent.format(value)}%`;
+    const width = Math.max(620, pontos.length > 60 ? pontos.length * 16 : 760);
+    const max = Math.max(1, ...pontos.map(item => item.quantidade));
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', `0 0 ${width} 260`);
+    svg.style.width = pontos.length > 60 ? `${width}px` : '100%';
+    svg.style.minWidth = '620px';
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', `${titles[visao]}, ${escalas[temporal.escala]}. Quantidades detalhadas na tabela abaixo.`);
+    function shape(tag, attrs, text) {
+      const element = document.createElementNS(svg.namespaceURI, tag);
+      for (const [key, value] of Object.entries(attrs)) element.setAttribute(key, String(value));
+      if (text !== undefined) element.textContent = text;
+      svg.append(element);
+      return element;
+    }
+    for (let i = 0; i <= 4; i++) {
+      const y = 210 - i * 45;
+      shape('line', { x1: 48, x2: width - 28, y1: y, y2: y, stroke: '#e8eef2' });
+      shape('text', { x: 40, y: y + 4, 'text-anchor': 'end' }, count.format(max * i / 4));
+    }
+    const coordinates = pontos.map((item, index) => ({
+      x: pontos.length === 1 ? width / 2 : 60 + index * (width - 100) / (pontos.length - 1),
+      y: 210 - item.quantidade / max * 180,
+    }));
+    shape('polyline', { points: coordinates.map(point => `${point.x},${point.y}`).join(' '), fill: 'none', stroke: '#218779', 'stroke-width': 3 });
+    const labelStep = Math.max(1, Math.ceil(pontos.length / Math.max(1, Math.floor((width - 100) / 100))));
+    pontos.forEach((item, index) => {
+      const { x, y } = coordinates[index];
+      const label = `${dateText(item.inicio)} a ${dateText(item.fim)}: ${count.format(item.quantidade)} | ${signedPercent(item.variacaoPercentual)} vs. intervalo anterior`;
+      const point = shape('circle', { cx: x, cy: y, r: 5, fill: '#218779', tabindex: 0, 'aria-label': label });
+      const title = document.createElementNS(svg.namespaceURI, 'title');
+      title.textContent = label;
+      point.append(title);
+      if (index % labelStep === 0 || index === pontos.length - 1) {
+        shape('text', { x, y: 235, 'text-anchor': 'middle' }, dateText(item.inicio));
+        shape('text', { x, y: y - 12, 'text-anchor': 'middle' }, count.format(item.quantidade));
+      }
+      const row = document.createElement('tr');
+      cell(row, `${dateText(item.inicio)} a ${dateText(item.fim)}`);
+      cell(row, count.format(item.quantidade));
+      cell(row, signedPercent(item.variacaoPercentual));
+      $('temporal-rows').append(row);
+    });
+    $('temporal-chart').append(svg);
+    const maxComparison = Math.max(1, comparison.totalAtual, comparison.totalAnterior);
+    for (const [label, total, inicio, fim, previous] of [
+      ['Periodo filtrado', comparison.totalAtual, comparison.inicioAtual, comparison.fimAtual, false],
+      ['Periodo de comparacao', comparison.totalAnterior, comparison.inicioAnterior, comparison.fimAnterior, true],
+    ]) {
+      const row = document.createElement('div');
+      row.className = `comparison-row${previous ? ' previous' : ''}`;
+      row.textContent = `${label}: ${dateText(inicio)} a ${dateText(fim)}`;
+      const value = document.createElement('strong');
+      value.textContent = `${count.format(total)} ${visao === 'saidas' ? 'saidas' : 'entradas'}`;
+      const track = document.createElement('div');
+      track.className = 'comparison-track';
+      const bar = document.createElement('div');
+      bar.className = 'comparison-bar';
+      bar.style.width = `${total / maxComparison * 100}%`;
+      track.append(bar);
+      row.append(value, track);
+      $('comparison-results').append(row);
+    }
+    const delta = document.createElement('p');
+    delta.id = 'comparison-delta';
+    delta.textContent = `${comparison.diferenca > 0 ? '+' : ''}${count.format(comparison.diferenca)} movimentacoes | ${signedPercent(comparison.variacaoPercentual)}`;
+    const note = document.createElement('p');
+    note.className = 'muted';
+    note.textContent = `Media diaria: ${percent.format(comparison.totalAtual / comparison.diasAtual)} no periodo filtrado (${comparison.diasAtual} dias) vs. ${percent.format(comparison.totalAnterior / comparison.diasAnterior)} na comparacao (${comparison.diasAnterior} dias). ${comparison.diasAtual !== comparison.diasAnterior ? 'Duracoes diferentes: os totais nao sao normalizados.' : ''} ${comparison.sobreposicao ? 'Os periodos se sobrepoem.' : ''} ${comparison.totalAnterior === 0 ? 'Comparacao sem movimentacoes: variacao percentual indisponivel.' : ''}`;
+    $('comparison-results').append(delta, note);
+  }
+  async function load(refresh = false, usarAplicados = false) {
+    if (busy) return;
+    if (!usarAplicados && !$('filters').reportValidity()) return;
+    if (visao !== 'ativos' && !$('comparison-form').reportValidity()) return;
+    if (visao !== 'ativos' && $('comparacao-modo').value === 'personalizado' && $('compararInicio').value > $('compararFim').value) {
+      $('temporal-error').textContent = 'Na comparacao, a data inicial deve ser anterior ou igual a data final.';
+      $('temporal-error').hidden = false;
+      return;
+    }
+    if (!usarAplicados && $('inicio').value > $('fim').value) {
+      $('results').hidden = true;
+      $('error').textContent = 'A data inicial deve ser anterior ou igual a data final.';
+      $('error').hidden = false;
+      return;
+    }
+    busy = true;
+    document.querySelectorAll('button, input, select').forEach(element => { element.disabled = true; });
+    $('results').setAttribute('aria-busy', 'true');
+    $('error').hidden = true;
+    $('page-info').textContent = 'Carregando bases...';
+    const params = usarAplicados && appliedParams ? new URLSearchParams(appliedParams) : filterParams();
+    temporalParams(params);
+    if (initialType) params.set('tipo', initialType);
+    initialType = '';
+    if (initialRanking) params.set('ranking', initialRanking);
+    initialRanking = '';
+    params.set('pagina', String(page));
+    params.set('visao', visao);
+    updateNavigation();
+    if (refresh) params.set('atualizar', '1');
+    let data;
+    try {
+      const response = await fetch(`/api/relatorio?${params}`);
+      data = await response.json();
+      if (!response.ok) throw new Error(data.erro || `HTTP ${response.status}`);
+      appliedParams = new URLSearchParams(params);
+      appliedParams.delete('atualizar');
+      options('cidade', data.cidades, 'Todas as cidades');
+      $('tipo').replaceChildren(new Option('Todos os tipos', ''),
+        ...data.tipos.map(item => new Option(item.nome, item.slug)));
+      $('tipo').value = data.tipoSelecionado;
+      $('ranking-criterio').value = data.criterioRanking;
+      updateNavigation();
+      for (const key of ['ativos', 'entradas', 'saidas']) $(key).textContent = count.format(data.totais[key]);
+      $('total-vendas').textContent = data.financeiro.totalVendas === null ? 'Nao disponivel' : money.format(data.financeiro.totalVendas);
+      $('valor-m2').textContent = data.financeiro.valorM2 === null ? 'Nao disponivel' : `${money.format(data.financeiro.valorM2)} / m\u00b2`;
+      $('ticket-medio').textContent = data.financeiro.ticketMedio === null ? 'Nao disponivel' : money.format(data.financeiro.ticketMedio);
+      $('total-vendas-info').textContent = `Precos anunciados de ${count.format(data.financeiro.comPreco)} de ${count.format(data.financeiro.vendas)} vendas desta tela. Sem preco ou com preco zero/negativo ficam fora.`;
+      $('valor-m2-info').textContent = `Soma dos precos / soma das areas de ${count.format(data.financeiro.comArea)} vendas com preco e area maiores que zero. Valores de aluguel nao entram.`;
+      $('ticket-medio-info').textContent = `Total $ Vendas / ${count.format(data.financeiro.comPreco)} anuncios de venda com preco maior que zero, em toda a lista filtrada.`;
+      renderRanking(data);
+      renderTemporal(data.temporal);
+      $('duration-info').textContent = `Permanencia em dias: inclusao ate retirada; se ativo, ate ${dateText(data.referenciaPermanencia)}. Datas ausentes ou invertidas: nao disponivel.`;
+      renderRecords($('rows'), data.registros);
+      page = data.pagina;
+      $('page-info').textContent = `${count.format(data.total)} anuncios | Pagina ${page} de ${data.paginas}`;
+      $('warnings').hidden = !Object.values(data.avisos).some(Boolean);
+      $('warnings').textContent = `Em todas as bases: ${count.format(data.avisos.semInclusao)} registros sem data de inclusao valida e ${count.format(data.avisos.semExclusao)} retirados sem data de exclusao valida. Essas datas nao sao estimadas e nao entram no respectivo total do periodo. Outros ${count.format(data.avisos.semIdentidade)} registros sem link e codigo foram excluidos de todas as contagens.`;
+      $('meta').textContent = `Fonte: backend-backup-limpo / crawler | ${data.arquivos} JSONs | Leitura: ${new Date(data.carregadoEm).toLocaleString('pt-BR')} | Somente leitura. Use Atualizar JSONs apos novas raspagens.`;
+      $('results').hidden = false;
+    } catch (error) {
+      if (usarAplicados) {
+        $('temporal-chart').replaceChildren();
+        $('temporal-rows').replaceChildren();
+        $('comparison-results').replaceChildren();
+        $('temporal-error').textContent = `Falha ao carregar a evolucao e o comparativo: ${error.message}`;
+        $('temporal-error').hidden = false;
+      } else {
+        $('results').hidden = true;
+        $('error').textContent = `Falha ao carregar o relatorio: ${error.message}. Inicie o servidor local conforme o README.`;
+        $('error').hidden = false;
+      }
+    } finally {
+      busy = false;
+      document.querySelectorAll('button, input, select').forEach(element => { element.disabled = false; });
+      $('previous').disabled = !data || page <= 1;
+      $('next').disabled = !data || page >= data.paginas;
+      $('results').setAttribute('aria-busy', 'false');
+    }
+  }
+  $('periodo').addEventListener('change', () => { preset(); updateNavigation(); });
+  for (const id of ['inicio', 'fim']) $(id).addEventListener('change', () => { $('periodo').value = 'custom'; });
+  $('filters').addEventListener('change', updateNavigation);
+  $('filters').addEventListener('submit', event => { event.preventDefault(); page = 1; load(); });
+  $('ranking-criterio').addEventListener('change', () => load());
+  $('escala').addEventListener('change', () => load(false, true));
+  $('comparacao-modo').addEventListener('change', () => {
+    const custom = $('comparacao-modo').value === 'personalizado';
+    for (const id of ['compararInicio', 'compararFim']) { $(id).readOnly = !custom; $(id).required = custom; }
+    if (!custom) load(false, true);
+    updateNavigation();
+  });
+  $('comparison-form').addEventListener('submit', event => { event.preventDefault(); load(false, true); });
+  $('refresh').addEventListener('click', () => { page = 1; load(true); });
+  $('previous').addEventListener('click', () => { page--; load(); });
+  $('next').addEventListener('click', () => { page++; load(); });
+  $('detail-close').addEventListener('click', () => $('detail-dialog').close());
+  $('detail-dialog').addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      $('detail-dialog').close();
+    }
+  });
+  $('detail-dialog').addEventListener('close', () => { detailRequest++; detailBusy = false; });
+  $('detail-previous').addEventListener('click', () => { detailPage--; loadDetail(); });
+  $('detail-next').addEventListener('click', () => { detailPage++; loadDetail(); });
+  const initialParams = new URLSearchParams(location.search);
+  if (['auto', 'dia', 'semana', 'mes', 'ano'].includes(initialParams.get('escala'))) $('escala').value = initialParams.get('escala');
+  if (initialParams.has('compararInicio') || initialParams.has('compararFim')) {
+    $('comparacao-modo').value = 'personalizado';
+    for (const id of ['compararInicio', 'compararFim']) { $(id).value = initialParams.get(id) || ''; $(id).readOnly = false; $(id).required = true; }
+  }
+  preset();
+  if (initialParams.has('ranking')) $('ranking-criterio').value = initialParams.get('ranking');
+  for (const id of ['cidade', 'negociacao', 'periodo', 'inicio', 'fim']) {
+    if (!initialParams.has(id)) continue;
+    const value = initialParams.get(id);
+    if (id === 'cidade') {
+      if (![...$(id).options].some(option => option.value === value)) $(id).add(new Option(value, value));
+    }
+    $(id).value = value;
+  }
+  updateNavigation();
+  load();
+</script>
+</body>
+</html>

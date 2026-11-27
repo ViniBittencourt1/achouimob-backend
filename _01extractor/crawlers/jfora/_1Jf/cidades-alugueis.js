@@ -63,8 +63,10 @@ export function resolverCidadeAlugueis(root, projects, body) {
   return { ok: true, file: body.file, cidade, nome };
 }
 
-export function aplicarCorrecoesCidadeAlugueis(records, collection, root) {
-  const corrections = read(path.join(root, '_03database/outros/alugueis-cidade-correcoes.json'));
+export function aplicarCorrecoesCidadeAlugueis(records, collection, root, suppliedCorrections) {
+  const corrections = suppliedCorrections === undefined
+    ? read(path.join(root, '_03database/outros/alugueis-cidade-correcoes.json')) : suppliedCorrections;
+  if (!Array.isArray(corrections)) throw new Error('Correcoes de cidade de aluguel invalidas.');
   return records.map(item => {
     const correction = corrections.find(saved => saved.file === `${collection}Locacao.json` &&
       (saved.linkReal === item.linkReal || (saved.codigoBase && String(saved.codigoBase) === String(item.codigoBase))));

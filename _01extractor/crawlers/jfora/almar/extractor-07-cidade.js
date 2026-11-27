@@ -11,14 +11,18 @@ const __dirname = path.dirname(__filename);
 // O arquivo é lido apenas uma vez quando o módulo é iniciado.
 // Usando o caminho que você confirmou ser o correto.
 const cidadesPath = path.resolve(__dirname, '../../../../_03database/filtros/_brCidades.json');
-let cidadesList = [];
-try {
-  const cidadesData = fs.readFileSync(cidadesPath, 'utf8');
-  cidadesList = JSON.parse(cidadesData);
-  console.log('✅ Arquivo de cidades carregado com sucesso!');
-} catch (error) {
-  // Log detalhado em caso de falha no carregamento ou parsing.
-  console.error("❌ Erro ao carregar ou parsear o arquivo de cidades. Verifique o caminho:", error);
+let cidadesList;
+function cidadesLocais() {
+  if (cidadesList === undefined) {
+    try {
+      cidadesList = JSON.parse(fs.readFileSync(cidadesPath, 'utf8'));
+      console.log('✅ Arquivo de cidades carregado com sucesso!');
+    } catch (error) {
+      cidadesList = [];
+      console.error("❌ Erro ao carregar ou parsear o arquivo de cidades. Verifique o caminho:", error);
+    }
+  }
+  return cidadesList;
 }
 
 /**
@@ -57,7 +61,8 @@ function encontrarMelhorCidade(textoNormalizado, lista) {
  *   (a URL costuma conter o nome da cidade, ex.: ".../matias_barbosa--mg--venda...").
  * @returns {string} O slug da cidade (ex: "juiz-de-fora") ou uma string vazia.
  */
-export function extractCidadeFromCardHtml(cardHtml, linkReal = '') {
+export function extractCidadeFromCardHtml(cardHtml, linkReal = '', cidadesInformadas) {
+  const cidadesList = cidadesInformadas === undefined ? cidadesLocais() : cidadesInformadas;
   // Retorna imediatamente se não houver HTML ou se a lista de cidades não foi carregada.
   if (!cardHtml || cidadesList.length === 0) {
     return '';

@@ -4,14 +4,18 @@ import path from 'node:path';
 const normalize = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[-_]+/g,' ').replace(/\s+/g,' ').trim();
 const read = (file, fallback = []) => fs.existsSync(file) ? JSON.parse(fs.readFileSync(file,'utf8')) : fallback;
 const save = (file, data) => {fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,`${JSON.stringify(data,null,2)}\n`,'utf8');};
-const defaultCatalog = JSON.parse(fs.readFileSync(new URL('../../../../_03database/filtros/_brTipoImovel.json',import.meta.url),'utf8'));
+let defaultCatalog;
+function getDefaultCatalog() {
+  if (defaultCatalog === undefined) defaultCatalog = JSON.parse(fs.readFileSync(new URL('../../../../_03database/filtros/_brTipoImovel.json',import.meta.url),'utf8'));
+  return defaultCatalog;
+}
 
 function typeEntries(catalog) {
   if (catalog.tiposPorSlug) return Object.entries(catalog.tiposPorSlug).map(([slug,aliases])=>({slug,aliases:Array.isArray(aliases)?aliases:[]}));
   return Object.values(catalog.tiposFiltro || {}).flat().map(item=>({slug:item.slug,aliases:[item]}));
 }
 
-export function resolverTipoCatalogo(value, catalog = defaultCatalog) {
+export function resolverTipoCatalogo(value, catalog = getDefaultCatalog()) {
   const text = normalize(value);
   if (!text) return '';
   const entries = typeEntries(catalog);
@@ -21,7 +25,7 @@ export function resolverTipoCatalogo(value, catalog = defaultCatalog) {
   return matches.size===1 ? [...matches][0] : '';
 }
 
-export function resolverTipoCatalogoInicioTitulo(value, catalog = defaultCatalog) {
+export function resolverTipoCatalogoInicioTitulo(value, catalog = getDefaultCatalog()) {
   const cabecalho = String(value ?? '').replace(/^[^\p{L}\p{N}]+/u, '').replace(/\s+/g, ' ').trim()
     .split(/\s+para\s+(?:venda|loca[cç][aã]o)\b/i)[0];
   const palavras = cabecalho.split(/\s+/);
@@ -32,7 +36,7 @@ export function resolverTipoCatalogoInicioTitulo(value, catalog = defaultCatalog
   return '';
 }
 
-export function resolverTipoCatalogoContido(value, catalog = defaultCatalog) {
+export function resolverTipoCatalogoContido(value, catalog = getDefaultCatalog()) {
   const text = ` ${normalize(value).replace(/[^\p{L}\p{N}]+/gu,' ').trim()} `;
   if (!text.trim()) return '';
   const entries = typeEntries(catalog);
@@ -50,7 +54,7 @@ export function resolverTipoCatalogoContido(value, catalog = defaultCatalog) {
   return slugs.size === 1 ? [...slugs][0] : '';
 }
 
-export function resolverTipoCatalogoTextoAnuncio(value, catalog = defaultCatalog) {
+export function resolverTipoCatalogoTextoAnuncio(value, catalog = getDefaultCatalog()) {
   const cabecalho = normalize(value).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
     .split(/\b(?:para venda|para locacao|a venda|para alugar|no bairro|na rodovia|no centro|proximo|proxima|perto)\b/)[0];
   const especificos = {
@@ -105,8 +109,10 @@ export function resolverTipoAlugueis(backendRoot, projects, body) {
   return {ok:true,file:body.file,linkReal:body.linkReal,tipoImovel:body.tipoImovel};
 }
 
-export function aplicarCorrecoesTipoAlugueis(records, collection, backendRoot) {
-  const corrections=read(path.join(backendRoot,'_03database/outros/alugueis-tipo-imovel-correcoes.json'));
+export function aplicarCorrecoesTipoAlugueis(records, collection, backendRoot, suppliedCorrections) {
+  const corrections = suppliedCorrections === undefined
+    ? read(path.join(backendRoot,'_03database/outros/alugueis-tipo-imovel-correcoes.json')) : suppliedCorrections;
+  if (!Array.isArray(corrections)) throw new Error('Correcoes de tipo de aluguel invalidas.');
   return records.map(item=>{
     const correction=corrections.find(saved=>saved.file===`${collection}Locacao.json` && (saved.linkReal===item.linkReal || (saved.codigoBase && String(saved.codigoBase)===String(item.codigoBase))));
     return correction?{...item,tipoImovel:correction.tipoImovel}:item;

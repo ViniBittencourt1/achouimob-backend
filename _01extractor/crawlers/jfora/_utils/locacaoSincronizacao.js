@@ -12,7 +12,7 @@ export const COLUNAS_LOCACAO = [
   'dataExclusao', 'linkFoto', 'atualizadoEm',
 ];
 
-function identificarImovel(item, identificarPorLink = false) {
+export function identificarImovel(item, identificarPorLink = false) {
   const codigo = String(item.codigoBase ?? '').trim();
   if (!identificarPorLink && codigo && codigo !== '0') return `codigo:${codigo}`;
   const url = new URL(item.linkReal);

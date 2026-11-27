@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url';
  * @param {string} cardHtml O HTML do card do imóvel.
  * @returns {string} O slug normalizado do tipo de imóvel ou uma string vazia se não for encontrado.
  */
-export function extractTipoImovel(cardHtml) {
+export function extractTipoImovel(cardHtml, tiposInformados) {
   // --- ETAPA 1: Extrair o texto do HTML (lógica do seu código original) ---
   const dom = new JSDOM(cardHtml);
   const tipoSpan = dom.window.document.querySelector('div.imovel-item--tipo span');
@@ -57,8 +57,7 @@ export function extractTipoImovel(cardHtml) {
 
   let tiposList = [];
   try {
-    const jsonData = fs.readFileSync(tiposPath, 'utf8');
-    const tiposJson = JSON.parse(jsonData);
+    const tiposJson = tiposInformados === undefined ? JSON.parse(fs.readFileSync(tiposPath, 'utf8')) : tiposInformados;
     tiposList = collectTipos(tiposJson);
     if (!Array.isArray(tiposList) || tiposList.length === 0) {
       console.error('Nenhum tipo encontrado no JSON!');

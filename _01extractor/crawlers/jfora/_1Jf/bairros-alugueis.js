@@ -79,8 +79,10 @@ export function resolverBairroAlugueis(backendRoot, projects, body) {
   return {ok:true,file:body.file,bairro,cidade,nome};
 }
 
-export function aplicarCorrecoesBairroAlugueis(records, collection, backendRoot) {
-  const corrections = read(path.join(backendRoot,'_03database/outros/alugueis-bairro-correcoes.json'));
+export function aplicarCorrecoesBairroAlugueis(records, collection, backendRoot, suppliedCorrections) {
+  const corrections = suppliedCorrections === undefined
+    ? read(path.join(backendRoot,'_03database/outros/alugueis-bairro-correcoes.json')) : suppliedCorrections;
+  if (!Array.isArray(corrections)) throw new Error('Correcoes de bairro de aluguel invalidas.');
   return records.map(item => {
     const correction = corrections.find(saved=>saved.file===`${collection}Locacao.json` && (saved.linkReal===item.linkReal || (saved.codigoBase && String(saved.codigoBase)===String(item.codigoBase))));
     return correction ? {...item,bairro:correction.bairro,cidade:correction.cidade} : item;

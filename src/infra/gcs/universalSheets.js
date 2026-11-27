@@ -6,13 +6,14 @@ import { CABECALHO_IMOVEIS_SHEETS, negociacaoDaLinha } from '../../../_01extract
 const HEADER = [...CABECALHO_IMOVEIS_SHEETS, 'precoCondominio', 'precoIptu', 'precoTotal', 'precoOutros'];
 const ACTIVE = 'crawler/jfUniversal.json';
 const LEASE_MS = 15 * 60 * 1000;
+const JF_PROJECTS = new Set(['jfUniversal', 'jfAlicerce', 'jfAlmar', 'jfBargon', 'jfBrasil', 'jfCasaNova']);
 
 function entered(cell) {
   return cell?.userEnteredValue ? { userEnteredValue: cell.userEnteredValue } : {};
 }
 
-function normalizedRows(rows) {
-  const result = rows.map(row => Array.from({ length: HEADER.length }, (_, i) => entered(row?.values?.[i])));
+function normalizedRows(rows, width = HEADER.length) {
+  const result = rows.map(row => Array.from({ length: width }, (_, i) => entered(row?.values?.[i])));
   while (result.length && result.at(-1).every(cell => !cell.userEnteredValue)) result.pop();
   return result;
 }
@@ -25,60 +26,61 @@ function cellValue(value) {
   throw new Error('Campo de imovel nao pode ser representado no Sheets; aba preservada.');
 }
 
-function prepareChanges(sheet, records, sheetId) {
-  if (sheet.sheetId !== sheetId || sheet.title !== 'jfUniversal' || sheet.columnCount !== HEADER.length) {
-    throw new Error('Aba jfUniversal, ID ou quantidade de colunas incompativel; aba preservada.');
+function prepareChanges(sheet, records, sheetId, project, negotiation, header) {
+  if (sheet.sheetId !== sheetId || sheet.title !== project || sheet.columnCount !== header.length) {
+    throw new Error(`Aba ${project}, ID ou quantidade de colunas incompativel; aba preservada.`);
   }
-  const before = normalizedRows(sheet.rows);
-  if (JSON.stringify(before[0]?.map(cell => cell.userEnteredValue?.stringValue)) !== JSON.stringify(HEADER)) {
-    throw new Error('Cabecalho jfUniversal incompativel; aba preservada.');
+  const before = normalizedRows(sheet.rows, header.length);
+  if (JSON.stringify(before[0]?.map(cell => cell.userEnteredValue?.stringValue)) !== JSON.stringify(header)) {
+    throw new Error(`Cabecalho ${project} incompativel; aba preservada.`);
   }
   if (!Array.isArray(records) || !records.length ||
       records.some(item => !item || typeof item !== 'object' || Array.isArray(item) ||
         typeof item.linkReal !== 'string' || !item.linkReal.trim())) {
-    throw new Error('Snapshot de vendas vazio ou invalido; aba preservada.');
+    throw new Error('Snapshot vazio ou invalido; aba preservada.');
   }
-  const sales = linhasUniversal(records).map(row => [
-    ...row.slice(0, 20).map(cellValue), cellValue('venda'), ...row.slice(20).map(cellValue),
+  const newRows = linhasUniversal(records).map(row => [
+    ...row.slice(0, 20).map(cellValue), cellValue(negotiation), ...row.slice(20, 20 + header.length - 21).map(cellValue),
   ]);
-  const saleRows = [];
+  const selectedRows = [];
   for (let i = 1; i < before.length; i++) {
     if (before[i].every(cell => !cell.userEnteredValue)) continue;
-    const negotiation = before[i][20].userEnteredValue;
-    if (negotiation?.formulaValue) throw new Error('Negociacao calculada por formula; aba preservada.');
+    const cellNegotiation = before[i][20].userEnteredValue;
+    if (cellNegotiation?.formulaValue) throw new Error('Negociacao calculada por formula; aba preservada.');
     const row = Array(21).fill('');
-    row[20] = negotiation?.stringValue ?? '';
-    if (negotiation && typeof negotiation.stringValue !== 'string') {
+    row[20] = cellNegotiation?.stringValue ?? '';
+    if (cellNegotiation && typeof cellNegotiation.stringValue !== 'string') {
       throw new Error('Negociacao invalida na aba; dados preservados.');
     }
-    if (negociacaoDaLinha(row) === 'venda') saleRows.push(i);
+    if (negociacaoDaLinha(row) === negotiation) selectedRows.push(i);
   }
-  const needed = Math.max(0, sales.length - saleRows.length);
+  const needed = Math.max(0, newRows.length - selectedRows.length);
   if (before.length + needed > sheet.rowCount) throw new Error('Aba sem linhas suficientes; dados preservados.');
-  for (let i = 0; i < needed; i++) saleRows.push(before.length + i);
-  const changes = saleRows.map((index, i) => ({
-    index, values: sales[i] ?? Array.from({ length: HEADER.length }, () => ({})),
+  for (let i = 0; i < needed; i++) selectedRows.push(before.length + i);
+  const changes = selectedRows.map((index, i) => ({
+    index, values: newRows[i] ?? Array.from({ length: header.length }, () => ({})),
   }));
   const expected = structuredClone(before);
   for (const change of changes) expected[change.index] = change.values;
   while (expected.length && expected.at(-1).every(cell => !cell.userEnteredValue)) expected.pop();
-  return { before, expected, changes, sales: sales.length };
+  return { before, expected, changes, count: newRows.length };
 }
 
-export function createUniversalSheetAdapter({ keyFile }) {
+export function createUniversalSheetAdapter({ keyFile, project = 'jfUniversal' }) {
   if (!keyFile) throw new Error('Informe o arquivo de credenciais do Sheets.');
+  if (!JF_PROJECTS.has(project)) throw new Error('Projeto nao habilitado para envio ao Sheets.');
   const auth = new google.auth.GoogleAuth({ keyFile, scopes: ['https://www.googleapis.com/auth/spreadsheets'] });
   const api = google.sheets({ version: 'v4', auth });
   return {
     async read(spreadsheetId) {
       const response = await api.spreadsheets.get({
-        spreadsheetId, ranges: ["'jfUniversal'!A:Y"], includeGridData: true,
+        spreadsheetId, ranges: [`'${project}'!A:${project === 'jfUniversal' ? 'Y' : 'U'}`], includeGridData: true,
         fields: 'sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)),data(startRow,startColumn,rowData(values(userEnteredValue))))',
       });
       const sheet = response.data.sheets?.[0];
       const grid = sheet?.data?.[0];
       if (!sheet?.properties || !grid || (grid.startRow ?? 0) !== 0 || (grid.startColumn ?? 0) !== 0) {
-        throw new Error('Nao foi possivel ler a aba jfUniversal.');
+        throw new Error(`Nao foi possivel ler a aba ${project}.`);
       }
       return {
         sheetId: sheet.properties.sheetId, title: sheet.properties.title,
@@ -105,7 +107,23 @@ export function createUniversalSheetAdapter({ keyFile }) {
 }
 
 export async function exportUniversalSnapshot({ transaction, spreadsheetId, sheetId, actor, api, onBackup = () => {} }) {
-  if (!/^piloto-jfuniversal-[a-zA-Z0-9_-]+$/.test(transaction?.scope || '') ||
+  return exportSnapshot({ transaction, spreadsheetId, sheetId, actor, api, onBackup,
+    project: 'jfUniversal', negotiation: 'venda', active: ACTIVE,
+    validScope: /^piloto-jfuniversal-[a-zA-Z0-9_-]+$/ });
+}
+
+export async function exportJfSnapshot({ transaction, spreadsheetId, sheetId, actor, api, project, negotiation, onBackup = () => {} }) {
+  if (!JF_PROJECTS.has(project) || !['venda', 'aluguel'].includes(negotiation)) {
+    throw new Error('Projeto ou negociacao nao habilitado para envio ao Sheets.');
+  }
+  return exportSnapshot({ transaction, spreadsheetId, sheetId, actor, api, onBackup, project, negotiation,
+    active: `crawler/${project}${negotiation === 'aluguel' ? 'Locacao' : ''}.json`,
+    validScope: /^piloto-jf-compartilhado-[a-zA-Z0-9_-]+$/ });
+}
+
+async function exportSnapshot({ transaction, spreadsheetId, sheetId, actor, api, onBackup, project, negotiation, active, validScope }) {
+  const header = project === 'jfUniversal' ? HEADER : CABECALHO_IMOVEIS_SHEETS;
+  if (!validScope.test(transaction?.scope || '') ||
       !/^[a-zA-Z0-9_-]+$/.test(spreadsheetId || '') || !Number.isSafeInteger(sheetId) || sheetId < 0 ||
       typeof actor !== 'string' || !actor.trim() || !api?.read || !api?.write) {
     throw new Error('Configuracao de envio Universal invalida.');
@@ -117,9 +135,9 @@ export async function exportUniversalSnapshot({ transaction, spreadsheetId, shee
   try {
     const manifest = await transaction.current();
     if (!manifest) throw new Error('Piloto GCS nao inicializado.');
-    const records = await transaction.readDocument(manifest, ACTIVE);
+    const records = await transaction.readDocument(manifest, active);
     const sheet = await api.read(spreadsheetId);
-    const prepared = prepareChanges(sheet, records, sheetId);
+    const prepared = prepareChanges(sheet, records, sheetId, project, negotiation, header);
     const backup = {
       version: 1, createdAt: new Date().toISOString(), actor: actor.trim(), computerId: transaction.computerId,
       scope: transaction.scope, revision: manifest.revision, spreadsheetId, sheetId,
@@ -132,17 +150,17 @@ export async function exportUniversalSnapshot({ transaction, spreadsheetId, shee
     onBackup({ name: backupName, generation: saved.generation });
     const latest = await api.read(spreadsheetId);
     if (latest.sheetId !== sheet.sheetId || latest.title !== sheet.title || latest.columnCount !== sheet.columnCount ||
-        latest.rowCount !== sheet.rowCount || JSON.stringify(normalizedRows(latest.rows)) !== JSON.stringify(prepared.before)) {
+        latest.rowCount !== sheet.rowCount || JSON.stringify(normalizedRows(latest.rows, header.length)) !== JSON.stringify(prepared.before)) {
       throw new Error('Aba mudou durante o preparo; envio cancelado.');
     }
     await transaction.requireLease(lease);
     await api.write(spreadsheetId, sheetId, prepared.changes);
     const after = await api.read(spreadsheetId);
     if (after.sheetId !== sheetId || after.title !== sheet.title || after.columnCount !== sheet.columnCount ||
-        JSON.stringify(normalizedRows(after.rows)) !== JSON.stringify(prepared.expected)) {
+        JSON.stringify(normalizedRows(after.rows, header.length)) !== JSON.stringify(prepared.expected)) {
       throw new Error('Envio nao confirmado por releitura; verifique a aba antes de repetir.');
     }
-    result = { revision: manifest.revision, vendas: prepared.sales, backupName, backupGeneration: saved.generation };
+    result = { revision: manifest.revision, [negotiation === 'venda' ? 'vendas' : 'alugueis']: prepared.count, backupName, backupGeneration: saved.generation };
   } catch (error) {
     failure = error;
   }

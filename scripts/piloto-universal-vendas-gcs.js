@@ -10,7 +10,7 @@ const operationId = process.argv[2] || randomUUID();
 if (typeof global.gc !== 'function') {
   console.error('Inicie o piloto com node --expose-gc para limitar o uso de memoria durante a coleta.');
   process.exitCode = 1;
-} else if (!GCS_BUCKET || !/^piloto-jfuniversal-[a-zA-Z0-9_-]+$/.test(GCS_OPERATION_SCOPE || '') ||
+} else if (!GCS_BUCKET || !/^(?:piloto-jfuniversal-|piloto-jf-compartilhado-)[a-zA-Z0-9_-]+$/.test(GCS_OPERATION_SCOPE || '') ||
     !ACHOUIMOB_COMPUTER_ID || !ACHOUIMOB_ACTOR || process.argv.length > 3 ||
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(operationId)) {
   console.error('Informe GCS_BUCKET, escopo piloto, computador, operador e opcionalmente UUID valido.');

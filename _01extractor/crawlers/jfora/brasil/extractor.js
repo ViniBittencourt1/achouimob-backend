@@ -35,7 +35,15 @@ export async function extractBrasilData(browser, linksBusca, options = {}) {
 			let navegacaoOk = false;
 			for (let tentativa = 1; tentativa <= MAX_TENTATIVAS_NAV; tentativa++) {
 				try {
-					await page.goto(link, { waitUntil: 'networkidle2', timeout: 90000 });
+					const response = await page.goto(link, { waitUntil: 'networkidle2', timeout: 90000 });
+					if (options.catalogos) {
+						const expected = new URL(link);
+						const actual = new URL(page.url());
+						if (!response || !response.ok() || actual.origin !== expected.origin ||
+							actual.pathname !== expected.pathname || actual.searchParams.get('negociacao') !== expected.searchParams.get('negociacao')) {
+							throw new Error('[Brasil] Busca com HTTP invalido ou redirecionada; dados preservados.');
+						}
+					}
 					navegacaoOk = true;
 					break;
 				} catch (err) {
@@ -48,6 +56,7 @@ export async function extractBrasilData(browser, linksBusca, options = {}) {
 			}
 
 			if (!navegacaoOk) {
+				if (options.catalogos) throw new Error(`[Brasil] Navegacao falhou apos ${MAX_TENTATIVAS_NAV} tentativas; dados preservados.`);
 				console.error(`[${idx + 1}] Link ignorado após ${MAX_TENTATIVAS_NAV} tentativas: ${link}`);
 				continue;
 			}
@@ -103,14 +112,14 @@ export async function extractBrasilData(browser, linksBusca, options = {}) {
 				const html = await page.evaluate(el => el.outerHTML, card);
 				const titulo = await extractTitulo(html);
 				const linkReal = await extractLinkReal(html);
-				const cidade = extractCidadeFromCardHtml(html);
+				const cidade = extractCidadeFromCardHtml(html, options.catalogos?.cidades);
 				const imovel = {
 					linkReal,
 					titulo,
-						preco: await extractPreco(html, options.negociacao),
+					preco: await extractPreco(html, options.negociacao),
 					localizacao: await extractLocalizacao(html),
-					tipoImovel: await extractTipoImovel(html),
-					bairro: await extractBairro(html, cidade, linkReal),
+					tipoImovel: await extractTipoImovel(html, options.catalogos?.tipos),
+					bairro: await extractBairro(html, cidade, linkReal, options.catalogos?.bairros),
 					cidade,
 					dormitorioValor: await extractDormitorioValor(html),
 					banheiroValor: await extractBanheiroValor(html),
@@ -128,23 +137,26 @@ export async function extractBrasilData(browser, linksBusca, options = {}) {
 				};
 				allImoveis.push(imovel);
 				totalCards++;
+				if (options.liberarMemoria && totalCards % 20 === 0 && global.gc) global.gc();
 			}
 			console.log(`[${idx + 1}] Total acumulado de cards: ${totalCards}`);
 		} catch (err) {
-			if (Number.isInteger(options.totalEsperado)) throw err;
+			if (options.catalogos) throw err;
 			console.error(`[${idx + 1}] Erro ao processar o link. Pulando para o próximo...`);
 			console.error(err?.message || err);
 		} finally {
 			try {
 				await page.close();
-			} catch (e) {}
+			} catch (e) {
+				if (options.catalogos) throw e;
+			}
 		}
 	}
 	console.log(`\n[FINAL] Total de cards raspados: ${allImoveis.length}`);
 	if (Number.isInteger(options.totalEsperado) && allImoveis.length !== options.totalEsperado) {
 		throw new Error(`[Brasil] Total raspado divergente: ${allImoveis.length}/${options.totalEsperado}.`);
 	}
-	if (new Set(allImoveis.map(item => item.linkReal)).size !== allImoveis.length) {
+	if (options.catalogos && new Set(allImoveis.map(item => item.linkReal)).size !== allImoveis.length) {
 		throw new Error('[Brasil] Links de imoveis duplicados na coleta.');
 	}
 	return allImoveis;

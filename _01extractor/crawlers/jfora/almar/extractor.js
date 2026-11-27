@@ -1,4 +1,5 @@
 import { coletarVendasPadrao } from '../_utils/vendasPadraoPaginacao.js';
+import { coletarLocacaoPadrao } from '../_utils/locacaoPadraoPaginacao.js';
 import { extractCidadeFromCardHtml } from './extractor-07-cidade.js';
 import { extractLinkReal } from './extractor-01-linkReal.js';
 import { extractTitulo } from './extractor-02-titulo.js';
@@ -27,9 +28,11 @@ export async function extractAlmarData(browser, linksBusca, options = {}) {
 	for (const [idx, link] of linksBusca.entries()) {
 		console.log(`\n[${idx + 1}/${linksBusca.length}] Acessando: ${link}`);
 		const page = await browser.newPage();
+		try {
 		await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 		await page.setViewport({ width: 1280, height: 800 });
-		await page.goto(link, { waitUntil: 'networkidle2', timeout: 90000 });
+		const response = await page.goto(link, { waitUntil: 'networkidle2', timeout: 90000 });
+		if (options.catalogos && (!response || !response.ok())) throw new Error(`HTTP ${response?.status()} na busca Almar; dados preservados.`);
 		// Clicar LGPD se aparecer
 		try {
 			await page.waitForSelector('lgpd-close', { timeout: 5000 });
@@ -54,24 +57,25 @@ export async function extractAlmarData(browser, linksBusca, options = {}) {
 			}
 		}
 		// Raspagem dos cards
-		const cards = options.totalEsperado !== undefined ? await coletarVendasPadrao(page, link, options.totalEsperado) : await page.$$('.imovel-item.imovel-item-show');
+		const cards = options.negociacao === 'locacao' && options.totalEsperado !== undefined
+			? await coletarLocacaoPadrao(page, link, options.totalEsperado)
+			: options.totalEsperado !== undefined ? await coletarVendasPadrao(page, link, options.totalEsperado) : await page.$$('.imovel-item.imovel-item-show');
 		console.log(`[${idx + 1}] Cards encontrados: ${cards.length}`);
 		if (cards.length === 0) {
-			await page.close();
 			continue;
 		}
 		for (const card of cards) {
 			const html = typeof card === 'string' ? card : await page.evaluate(el => el.outerHTML, card);
 			const titulo = await extractTitulo(html);
 			const linkReal = await extractLinkReal(html);
-			const cidade = extractCidadeFromCardHtml(html, linkReal);
+			const cidade = extractCidadeFromCardHtml(html, linkReal, options.catalogos?.cidades);
 			const imovel = {
 				linkReal,
 				titulo,
 				preco: await extractPreco(html, options.negociacao),
 				localizacao: await extractLocalizacao(html),
-				tipoImovel: await extractTipoImovel(html),
-				bairro: await extractBairro(html, cidade, linkReal),
+				tipoImovel: await extractTipoImovel(html, options.catalogos?.tipos),
+				bairro: await extractBairro(html, cidade, linkReal, options.catalogos?.bairros),
 				   cidade,
 				dormitorioValor: await extractDormitorioValor(html),
 				banheiroValor: await extractBanheiroValor(html),
@@ -89,10 +93,11 @@ export async function extractAlmarData(browser, linksBusca, options = {}) {
 			};
 			allImoveis.push(imovel);
 			totalCards++;
+			if (options.liberarMemoria && totalCards % 20 === 0 && global.gc) global.gc();
 			if (options.totalEsperado !== undefined && totalCards % 20 === 0) await new Promise(resolve => setImmediate(resolve));
 		}
 		console.log(`[${idx + 1}] Total acumulado de cards: ${totalCards}`);
-		await page.close();
+		} finally { await page.close(); }
 	}
 	console.log(`\n[FINAL] Total de cards raspados: ${allImoveis.length}`);
 	if (options.totalEsperado !== undefined && allImoveis.length !== options.totalEsperado) throw new Error(`Coleta incompleta: ${allImoveis.length}/${options.totalEsperado}; detalhes nao serao visitados e base preservada.`);

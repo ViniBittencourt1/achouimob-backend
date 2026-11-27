@@ -10,14 +10,18 @@ const __dirname = path.dirname(__filename);
 // --- Carregamento Otimizado do JSON de Cidades ---
 // O arquivo é lido apenas uma vez quando o módulo é iniciado.
 const cidadesPath = path.resolve(__dirname, '../../../../_03database/filtros/_brCidades.json');
-let cidadesList = [];
-try {
-  const cidadesData = fs.readFileSync(cidadesPath, 'utf8');
-  cidadesList = JSON.parse(cidadesData);
-  console.log('✅ Arquivo de cidades carregado com sucesso!');
-} catch (error) {
-  // Log detalhado em caso de falha no carregamento ou parsing.
-  console.error("❌ Erro ao carregar ou parsear o arquivo de cidades. Verifique o caminho:", error);
+let cidadesList;
+function cidadesLocais() {
+  if (cidadesList === undefined) {
+    try {
+      cidadesList = JSON.parse(fs.readFileSync(cidadesPath, 'utf8'));
+      console.log('✅ Arquivo de cidades carregado com sucesso!');
+    } catch (error) {
+      cidadesList = [];
+      console.error("❌ Erro ao carregar ou parsear o arquivo de cidades. Verifique o caminho:", error);
+    }
+  }
+  return cidadesList;
 }
 
 /**
@@ -36,7 +40,8 @@ function normalizeText(text = '') {
  * @param {string} cardHtml O conteúdo HTML a ser processado.
  * @returns {string} O slug da cidade (ex: "juiz-de-fora") ou uma string vazia.
  */
-export function extractCidadeFromCardHtml(cardHtml) {
+export function extractCidadeFromCardHtml(cardHtml, cidadesInformadas) {
+  const cidadesList = cidadesInformadas === undefined ? cidadesLocais() : cidadesInformadas;
   // Retorna imediatamente se não houver HTML ou se a lista de cidades não foi carregada.
   if (!cardHtml || cidadesList.length === 0) {
     return '';

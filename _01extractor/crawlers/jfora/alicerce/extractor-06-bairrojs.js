@@ -9,11 +9,16 @@ const __dirname = path.dirname(__filename);
 
 // Carrega o catalogo de bairros (mesmo arquivo usado pelo painel: slug, cidade, nome, principal).
 const bairrosPath = path.resolve(__dirname, '../../../../_03database/filtros/_jfBairros.json');
-let bairrosList = [];
-try {
-  bairrosList = JSON.parse(fs.readFileSync(bairrosPath, 'utf8'));
-} catch (e) {
-  bairrosList = [];
+let bairrosList;
+function bairrosLocais() {
+  if (bairrosList === undefined) {
+    try {
+      bairrosList = JSON.parse(fs.readFileSync(bairrosPath, 'utf8'));
+    } catch (e) {
+      bairrosList = [];
+    }
+  }
+  return bairrosList;
 }
 
 function normalizeText(text = '') {
@@ -73,14 +78,15 @@ function buscarMelhorMatch(textoNormalizado, candidatos) {
  * @param {string} cardHtml HTML do card do imóvel.
  * @param {string} [cidade] Slug da cidade já identificada para este card.
  */
-export function extractBairroFromCardHtml(cardHtml, cidade = '') {
+export function extractBairroFromCardHtml(cardHtml, cidade = '', bairrosInformados) {
   const bairroExtraido = extrairBairroDoHtml(cardHtml);
   if (!bairroExtraido) return '';
 
+  const bairros = bairrosInformados === undefined ? bairrosLocais() : bairrosInformados;
   const cidadeNormalizada = normalizeText(cidade);
   const candidatos = cidadeNormalizada
-    ? bairrosList.filter((item) => normalizeText(item.cidade) === cidadeNormalizada)
-    : bairrosList;
+    ? bairros.filter((item) => normalizeText(item.cidade) === cidadeNormalizada)
+    : bairros;
 
   // 1 - Se o texto contém a palavra "bairro", prioriza o trecho após ela
   // (ex.: "...NO BAIRRO CENTRO" -> "CENTRO"), mais preciso para o catálogo.
@@ -100,7 +106,7 @@ export function extractBairroFromCardHtml(cardHtml, cidade = '') {
   }
 
   // Se não encontrar, retorna o texto extraído em maiúsculas.
-  return resolverBairroCatalogo(bairroExtraido, cidade);
+  return resolverBairroCatalogo(bairroExtraido, cidade, bairrosInformados);
 }
 
 // Export padrão para compatibilidade antiga

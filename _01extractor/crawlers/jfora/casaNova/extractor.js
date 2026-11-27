@@ -1,4 +1,5 @@
 import { coletarVendasPadrao } from '../_utils/vendasPadraoPaginacao.js';
+import { coletarLocacaoPadrao } from '../_utils/locacaoPadraoPaginacao.js';
 import { extractCidadeFromCardHtml } from './extractor-07-cidade.js';
 import { extractLinkReal } from './extractor-01-linkReal.js';
 import { extractTitulo } from './extractor-02-titulo.js';
@@ -36,7 +37,8 @@ export async function extractCasaNovaData(browser, linksBusca, options = {}) {
 			let navegacaoOk = false;
 			for (let tentativa = 1; tentativa <= MAX_TENTATIVAS_NAV; tentativa++) {
 				try {
-					await page.goto(link, { waitUntil: 'networkidle2', timeout: 90000 });
+					const response = await page.goto(link, { waitUntil: 'networkidle2', timeout: 90000 });
+					if (options.catalogos && (!response || !response.ok())) throw new Error(`HTTP ${response?.status()} na busca Casa Nova.`);
 					navegacaoOk = true;
 					break;
 				} catch (err) {
@@ -49,6 +51,7 @@ export async function extractCasaNovaData(browser, linksBusca, options = {}) {
 			}
 
 			if (!navegacaoOk) {
+				if (options.catalogos) throw new Error(`[CasaNova] Navegacao falhou apos ${MAX_TENTATIVAS_NAV} tentativas; dados preservados.`);
 				console.error(`[${idx + 1}] Link ignorado após ${MAX_TENTATIVAS_NAV} tentativas: ${link}`);
 				continue;
 			}
@@ -77,7 +80,9 @@ export async function extractCasaNovaData(browser, linksBusca, options = {}) {
 			}
 			console.log(`[${idx + 1}] Fim do loop de paginação. Iniciando busca dos cards...`);
 			// Raspagem dos cards
-			const cards = options.totalEsperado !== undefined ? await coletarVendasPadrao(page, link, options.totalEsperado) : await page.$$('.imovel-item.imovel-item-show');
+			const cards = options.negociacao === 'locacao' && options.totalEsperado !== undefined
+				? await coletarLocacaoPadrao(page, link, options.totalEsperado)
+				: options.totalEsperado !== undefined ? await coletarVendasPadrao(page, link, options.totalEsperado) : await page.$$('.imovel-item.imovel-item-show');
 			console.log(`[${idx + 1}] Cards encontrados: ${cards.length}`);
 			if (cards.length === 0) {
 				continue;
@@ -88,11 +93,11 @@ export async function extractCasaNovaData(browser, linksBusca, options = {}) {
 				const imovel = {
 					linkReal: await extractLinkReal(html),
 					titulo,
-						preco: await extractPreco(html, options.negociacao),
+					preco: await extractPreco(html, options.negociacao),
 					localizacao: await extractLocalizacao(html),
-					tipoImovel: await extractTipoImovel(html),
-					bairro: await extractBairro(html),
-					cidade: extractCidadeFromCardHtml(html),
+					tipoImovel: await extractTipoImovel(html, options.catalogos?.tipos),
+					bairro: await extractBairro(html, '', options.catalogos?.bairros),
+					cidade: extractCidadeFromCardHtml(html, options.catalogos?.cidades),
 					dormitorioValor: await extractDormitorioValor(html),
 					banheiroValor: await extractBanheiroValor(html),
 					ambienteValor: await extractAmbienteValor(html),
@@ -109,16 +114,20 @@ export async function extractCasaNovaData(browser, linksBusca, options = {}) {
 				};
 				allImoveis.push(imovel);
 				totalCards++;
+				if (options.liberarMemoria && totalCards % 20 === 0 && global.gc) global.gc();
 				if (options.totalEsperado !== undefined && totalCards % 20 === 0) await new Promise(resolve => setImmediate(resolve));
 			}
 			console.log(`[${idx + 1}] Total acumulado de cards: ${totalCards}`);
 		} catch (err) {
+			if (options.catalogos) throw err;
 			console.error(`[${idx + 1}] Erro ao processar o link. Pulando para o próximo...`);
 			console.error(err?.message || err);
 		} finally {
 			try {
 				await page.close();
-			} catch (e) {}
+			} catch (e) {
+				if (options.catalogos) throw e;
+			}
 		}
 	}
 	console.log(`\n[FINAL] Total de cards raspados: ${allImoveis.length}`);
